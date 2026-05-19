@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mageasy 補貨儀表板</title>
+<style>
+:root {
+  --bg:#f0f2f5; --card:#fff; --border:#e0e4eb;
+  --primary:#1976D2; --primary-dk:#1565C0; --primary-lt:#E3F2FD;
+  --green:#2E7D32; --green-bg:#E8F5E9;
+  --orange:#E65100; --orange-bg:#FFF3E0;
+  --red:#C62828; --red-bg:#FFEBEE;
+  --yellow-bg:#FFFDE7;
+  --text:#1a1a1a; --text2:#555; --text3:#999;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:12px;}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:200;height:52px;background:var(--primary);
+  display:flex;align-items:center;padding:0 16px;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+.topbar h1{color:#fff;font-size:15px;font-weight:700;flex:1;}
+.sync-info{color:rgba(255,255,255,.65);font-size:11px;}
+.btn{padding:6px 13px;border-radius:6px;border:none;cursor:pointer;font-size:12px;
+  font-weight:600;display:inline-flex;align-items:center;gap:4px;}
+.btn-white{background:#fff;color:var(--primary);}
+.btn-white:hover{background:#e3f2fd;}
+.btn-outline{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);}
+.btn-outline:hover{background:rgba(255,255,255,.15);}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-primary:hover{background:var(--primary-dk);}
+.btn-green{background:#388E3C;color:#fff;}
+.btn-green:hover{background:var(--green);}
+.btn-orange{background:#F57F17;color:#fff;}
+.btn-orange:hover{background:var(--orange);}
+.btn-sm{padding:4px 10px;font-size:11px;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+
+.page{max-width:100%;padding:12px 16px;}
+
+/* kpi cards */
+.cards{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.card{background:var(--card);border-radius:9px;padding:12px 14px;border:1px solid var(--border);min-width:130px;}
+.card .lbl{font-size:10px;color:var(--text2);margin-bottom:3px;}
+.card .val{font-size:20px;font-weight:700;}
+.card .sub{font-size:10px;color:var(--text3);margin-top:2px;}
+.card.c-red{border-left:3px solid var(--red);}
+.card.c-orange{border-left:3px solid #F57F17;}
+.card.c-green{border-left:3px solid var(--green);}
+.card.c-blue{border-left:3px solid var(--primary);}
+
+/* upload section */
+.upload-row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+.upload-card{background:var(--card);border:1px solid var(--border);border-radius:9px;
+  padding:12px 14px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:220px;}
+.upload-card .title{font-size:12px;font-weight:700;color:var(--text2);}
+.upload-card .hint{font-size:10px;color:var(--text3);}
+.upload-row-inner{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.status-msg{font-size:11px;font-weight:600;}
+.status-msg.ok{color:var(--green);}
+.status-msg.err{color:var(--red);}
+
+/* toolbar */
+.toolbar{background:var(--card);border:1px solid var(--border);border-radius:9px;
+  padding:10px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.toolbar label{font-size:11px;color:var(--text2);white-space:nowrap;}
+input[type=text],select{border:1px solid var(--border);border-radius:5px;
+  padding:5px 9px;font-size:11px;outline:none;background:#fafafa;}
+input[type=text]:focus,select:focus{border-color:var(--primary);background:#fff;}
+.spacer{flex:1;}
+
+/* table */
+.tbl-wrap{background:var(--card);border:1px solid var(--border);border-radius:9px;
+  overflow:auto;max-height:calc(100vh - 310px);}
+table{width:100%;border-collapse:collapse;font-size:11px;}
+thead tr{position:sticky;top:0;z-index:10;}
+thead th{background:#37474F;color:#fff;padding:7px 8px;text-align:center;
+  white-space:nowrap;font-size:10px;font-weight:600;
+  border-right:1px solid rgba(255,255,255,.1);cursor:pointer;user-select:none;}
+thead th:hover{background:#546E7A;}
+thead th.asc::after{content:" ↑";}
+thead th.dsc::after{content:" ↓";}
+
+/* column group headers */
+thead tr.grp th{background:#263238;font-size:9px;color:rgba(255,255,255,.6);
+  padding:3px 8px;font-weight:400;letter-spacing:.3px;}
+thead tr.grp th.g-id   {background:#1A237E;color:#fff;}
+thead tr.grp th.g-cfg  {background:#4A148C;color:#fff;}
+thead tr.grp th.g-sales{background:#1B5E20;color:#fff;}
+thead tr.grp th.g-fba  {background:#0D47A1;color:#fff;}
+thead tr.grp th.g-awd  {background:#BF360C;color:#fff;}
+thead tr.grp th.g-cov  {background:#1565C0;color:#fff;}
+thead tr.grp th.g-sz   {background:#558B2F;color:#fff;}
+thead tr.grp th.g-rep  {background:#4E342E;color:#fff;}
+thead tr.grp th.g-alert{background:#B71C1C;color:#fff;}
+
+tbody tr:hover{background:#f5f7fa;}
+tbody td{padding:5px 8px;border-bottom:1px solid var(--border);
+  text-align:center;white-space:nowrap;}
+tbody td.left{text-align:left;max-width:220px;overflow:hidden;text-overflow:ellipsis;}
+tbody td.name-cell{text-align:left;min-width:180px;max-width:320px;white-space:normal;word-break:break-word;line-height:1.4;}
+tbody td.sku{font-weight:700;font-size:11px;text-align:left;}
+tbody td.num{font-variant-numeric:tabular-nums;}
+
+/* badges */
+.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;}
+.b-hero  {background:#E8EAF6;color:#3949AB;}
+.b-norm  {background:#F3E5F5;color:#7B1FA2;}
+.b-air   {background:var(--red-bg);color:var(--red);}
+.b-red   {background:var(--red-bg);color:var(--red);}
+.b-yellow{background:var(--orange-bg);color:var(--orange);}
+.b-green {background:var(--green-bg);color:var(--green);}
+
+/* coverage colours */
+.cov-danger{color:var(--red);font-weight:700;}
+.cov-warn  {color:var(--orange);font-weight:700;}
+.cov-ok    {color:var(--green);font-weight:600;}
+.cov-over  {color:var(--text3);}
+
+/* highlight cells */
+.hi-blue{color:var(--primary);font-weight:700;}
+.hi-green{color:var(--green);font-weight:700;}
+
+/* empty / spinner */
+.empty{text-align:center;padding:50px 20px;color:var(--text3);}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid #ddd;
+  border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;}
+.modal-overlay.open{display:flex;align-items:center;justify-content:center;}
+.modal{background:#fff;border-radius:12px;width:520px;max-height:82vh;overflow:auto;padding:22px;}
+.modal h3{font-size:14px;font-weight:700;margin-bottom:14px;}
+.cfg-row{display:grid;grid-template-columns:1fr 140px 80px 80px;gap:8px;align-items:center;
+  padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;}
+.cfg-row.hdr{font-weight:700;color:var(--text2);font-size:10px;padding-bottom:4px;}
+.modal input[type=number],.modal input[type=text],.modal select{
+  width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;}
+.modal-footer{margin-top:16px;display:flex;gap:8px;justify-content:flex-end;}
+
+/* ── Tabs ───────────────────────────────────────────────────────────────── */
+.tab-nav{background:#fff;border-bottom:2px solid var(--border);display:flex;padding:0 16px;gap:2px;}
+.tab-btn{padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
+  color:var(--text2);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;
+  transition:color .15s;}
+.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary);}
+.tab-btn:hover:not(.active){color:var(--text);background:#f5f7fa;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* ── Traffic charts ─────────────────────────────────────────────────────── */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:14px;}
+.chart-card h4{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;}
+.chart-card.full{grid-column:1/-1;}
+.chart-canvas{position:relative;height:240px;}
+
+/* ── MoM cards ──────────────────────────────────────────────────────────── */
+.mom-grid{display:grid;grid-template-columns:1fr 1fr 2fr;gap:12px;margin-bottom:12px;}
+.mom-card{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:14px;}
+.mom-card h4{font-size:11px;font-weight:700;margin-bottom:8px;color:var(--text2);}
+.mom-row{display:flex;justify-content:space-between;padding:5px 0;
+  border-bottom:1px solid var(--border);font-size:11px;}
+.mom-row:last-child{border-bottom:none;}
+.mom-lbl{color:var(--text2);}
+.mom-val{font-weight:600;font-variant-numeric:tabular-nums;}
+.delta-up{color:var(--green);}
+.delta-dn{color:var(--red);}
+
+/* ── Date range filter ───────────────────────────────────────────────────── */
+.preset-group{display:flex;gap:3px;}
+.preset-btn{padding:5px 11px;border:1px solid var(--border);border-radius:5px;
+  background:#fafafa;font-size:11px;font-weight:600;cursor:pointer;color:var(--text2);
+  transition:all .15s;}
+.preset-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+.preset-btn:hover:not(.active){background:#e3f2fd;border-color:var(--primary);color:var(--primary);}
+.date-range{display:flex;align-items:center;gap:6px;}
+.date-range span.sep{color:var(--text3);font-size:13px;font-weight:300;}
+input[type=month]{border:1px solid var(--border);border-radius:5px;padding:5px 8px;
+  font-size:11px;background:#fafafa;cursor:pointer;outline:none;color:var(--text);}
+input[type=month]:focus{border-color:var(--primary);background:#fff;}
+.filter-divider{width:1px;height:20px;background:var(--border);margin:0 4px;}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <h1>🛒 Mageasy 補貨儀表板</h1>
+  <span class="sync-info" id="lastRefresh">尚未載入</span>
+  <button class="btn btn-outline btn-sm" onclick="loadData()">🔄 重新整理</button>
+  <button class="btn btn-white btn-sm" onclick="openCfg()">⚙️ SKU 設定</button>
+  <button class="btn btn-white btn-sm" onclick="openControls()">🎛️ 水位設定</button>
+  <button class="btn btn-white btn-sm" onclick="exportCsv()">⬇ 匯出 CSV</button>
+</div>
+
+<!-- Tab Navigation -->
+<div class="tab-nav">
+  <button class="tab-btn active" data-tab="replenishment" onclick="switchTab('replenishment')">📦 補貨儀表板</button>
+  <button class="tab-btn" data-tab="traffic" onclick="switchTab('traffic')">📊 流量分析</button>
+</div>
+
+<!-- Tab: Replenishment (existing) -->
+<div id="tab-replenishment" class="tab-content active">
+<div class="page">
+
+  <!-- KPI cards -->
+  <div class="cards">
+    <div class="card c-blue">
+      <div class="lbl">總 SKU 數</div>
+      <div class="val" id="k-total">—</div>
+      <div class="sub" id="k-total-sub">已載入</div>
+    </div>
+    <div class="card c-red">
+      <div class="lbl">⚠️ 空運警示</div>
+      <div class="val" id="k-air" style="color:var(--red)">—</div>
+      <div class="sub">Coverage &lt; 2.33M</div>
+    </div>
+    <div class="card c-orange">
+      <div class="lbl">🔴 超過 3M Cap</div>
+      <div class="val" id="k-cap" style="color:var(--orange)">—</div>
+      <div class="sub">FBA+AWD &gt; 3 個月</div>
+    </div>
+    <div class="card c-green">
+      <div class="lbl">🚢 需補海運</div>
+      <div class="val" id="k-sea" style="color:var(--green)">—</div>
+      <div class="sub">建議海運量 &gt; 0</div>
+    </div>
+    <div class="card c-blue">
+      <div class="lbl">📦 Catalog</div>
+      <div class="val" id="k-cat">—</div>
+      <div class="sub" id="k-cat-sub">尚未上傳</div>
+    </div>
+    <div class="card c-green">
+      <div class="lbl">🏭 AWD 同步</div>
+      <div class="val" id="k-awd">—</div>
+      <div class="sub" id="k-awd-sub">尚未同步</div>
+    </div>
+    <div class="card c-green">
+      <div class="lbl">📦 深圳倉</div>
+      <div class="val" id="k-sz">—</div>
+      <div class="sub" id="k-sz-sub">尚未上傳</div>
+    </div>
+  </div>
+
+  <!-- Upload row -->
+  <div class="upload-row">
+
+    <!-- MAGEASY Anchor -->
+    <div class="upload-card">
+      <div class="title">📋 MAGEASY Anchor（產品目錄）</div>
+      <div class="hint">欄位: SKU, Parent ASIN, Child ASIN, Collection, Name</div>
+      <div class="upload-row-inner">
+        <input type="file" id="catalog-file" accept=".xlsx,.xls,.csv" style="font-size:10px;flex:1">
+        <button class="btn btn-primary btn-sm" onclick="uploadFile('catalog')">上傳</button>
+        <span class="status-msg" id="catalog-status"></span>
+      </div>
+    </div>
+
+    <!-- SZ Warehouse -->
+    <div class="upload-card">
+      <div class="title">🏪 深圳倉（SZ Warehouse）</div>
+      <div class="hint">欄位: 商品编码（= Amazon SKU）、可出库数量</div>
+      <div class="upload-row-inner">
+        <input type="file" id="sz-file" accept=".xlsx,.xls,.csv" style="font-size:10px;flex:1">
+        <button class="btn btn-green btn-sm" onclick="uploadFile('sz')">上傳</button>
+        <span class="status-msg" id="sz-status"></span>
+      </div>
+    </div>
+
+    <!-- AWD Sync -->
+    <div class="upload-card">
+      <div class="title">🏭 AWD Inventory（自動同步）</div>
+      <div class="hint">直接從 Amazon SP-API 抓取，無需下載檔案</div>
+      <div class="upload-row-inner">
+        <button class="btn btn-orange btn-sm" id="awd-btn" onclick="syncAwd()">🔄 立即同步 AWD</button>
+        <span class="status-msg" id="awd-status"></span>
+      </div>
+      <div style="margin-top:4px;font-size:10px;color:var(--text3)">
+        備用 CSV：<input type="file" id="awd-file" accept=".xlsx,.xls,.csv" style="font-size:10px">
+        <button class="btn btn-sm" style="background:#ccc" onclick="uploadFile('awd')">上傳</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <label>搜尋</label>
+    <input type="text" id="q" placeholder="SKU / ASIN / Collection / 品名" style="width:220px" oninput="render()">
+    <label>類型</label>
+    <select id="f-type" onchange="render()">
+      <option value="">全部</option>
+      <option value="流量款">流量款</option>
+      <option value="一般款">一般款</option>
+    </select>
+    <label>警示</label>
+    <select id="f-alert" onchange="render()">
+      <option value="">全部</option>
+      <option value="air">空運警示</option>
+      <option value="cap">超過上限</option>
+      <option value="sea">需補海運</option>
+    </select>
+    <label>Collection</label>
+    <select id="f-coll" onchange="render()"><option value="">全部</option></select>
+    <div class="spacer"></div>
+    <span id="row-count" style="color:var(--text3);font-size:11px"></span>
+  </div>
+
+  <!-- Table -->
+  <div class="tbl-wrap">
+    <table id="tbl">
+      <thead>
+        <!-- Group row -->
+        <tr class="grp">
+          <th colspan="5" class="g-id">識別資訊</th>
+          <th colspan="2" class="g-cfg">設定</th>
+          <th colspan="1" class="g-sales">銷售</th>
+          <th colspan="4" class="g-fba">FBA</th>
+          <th colspan="5" class="g-awd">AWD</th>
+          <th colspan="1" class="g-cov">Coverage</th>
+          <th colspan="4" class="g-sz">深圳倉 / 設定</th>
+          <th colspan="5" class="g-rep">補貨計算</th>
+          <th colspan="2" class="g-alert">警示</th>
+        </tr>
+        <!-- Column header row -->
+        <tr id="hdr"></tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="29" class="empty"><div class="spinner"></div> 載入中...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div><!-- /tab-replenishment -->
+
+<!-- Tab: Traffic Analysis -->
+<div id="tab-traffic" class="tab-content">
+<div class="page">
+
+  <!-- KPI strip -->
+  <div class="t-cards cards" id="t-kpis">
+    <div class="card c-blue"><div class="lbl">Sessions</div><div class="val">—</div><div class="sub">載入中…</div></div>
+    <div class="card c-green"><div class="lbl">整體 CVR%</div><div class="val">—</div><div class="sub">Units ÷ Sessions</div></div>
+    <div class="card c-orange"><div class="lbl">Units Ordered</div><div class="val">—</div><div class="sub">期間合計</div></div>
+    <div class="card c-blue"><div class="lbl">Revenue</div><div class="val">—</div><div class="sub">期間合計</div></div>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="toolbar" style="flex-wrap:wrap;gap:8px 12px;align-items:center;">
+    <!-- Presets -->
+    <div class="preset-group">
+      <button class="preset-btn" onclick="setPreset(3,this)">3M</button>
+      <button class="preset-btn" onclick="setPreset(6,this)">6M</button>
+      <button class="preset-btn active" onclick="setPreset(12,this)">12M</button>
+      <button class="preset-btn" onclick="setPreset(0,this)">全部</button>
+    </div>
+    <div class="filter-divider"></div>
+    <!-- Custom date range -->
+    <div class="date-range">
+      <span style="font-size:13px">📅</span>
+      <input type="month" id="t-from" onchange="clearPreset();applyTrafficFilter()">
+      <span class="sep">→</span>
+      <input type="month" id="t-to" onchange="clearPreset();applyTrafficFilter()">
+    </div>
+    <div class="filter-divider"></div>
+    <!-- Collection -->
+    <label style="font-size:11px;color:var(--text2)">Collection</label>
+    <select id="t-coll" onchange="applyTrafficFilter()"><option value="">全部</option></select>
+    <div class="spacer"></div>
+    <button class="btn btn-outline btn-sm" onclick="loadTraffic()">🔄 重新整理</button>
+  </div>
+
+  <!-- Pie charts row 1: Revenue + Units by Collection -->
+  <div class="chart-row">
+    <div class="chart-card">
+      <h4>💰 Revenue by Collection</h4>
+      <div class="chart-canvas"><canvas id="c-rev-coll"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h4>📦 Units by Collection</h4>
+      <div class="chart-canvas"><canvas id="c-units-coll"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Pie charts row 2: Revenue + Units by SKU top 10 -->
+  <div class="chart-row">
+    <div class="chart-card">
+      <h4>💰 Revenue by SKU（Top 10）</h4>
+      <div class="chart-canvas"><canvas id="c-rev-sku"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h4>📦 Units by SKU（Top 10）</h4>
+      <div class="chart-canvas"><canvas id="c-units-sku"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Line charts row: Sessions + CVR / Sessions + Units -->
+  <div class="chart-row">
+    <div class="chart-card">
+      <h4>📈 Monthly Sessions vs CVR%</h4>
+      <div class="chart-canvas"><canvas id="c-sessions-cvr"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h4>📊 Monthly Sessions vs Units Ordered</h4>
+      <div class="chart-canvas"><canvas id="c-sessions-units"></canvas></div>
+    </div>
+  </div>
+
+  <!-- MoM Comparison -->
+  <div class="chart-card" style="margin-bottom:12px">
+    <h4>📅 Month-over-Month 比較（最後兩個月）</h4>
+    <div id="t-mom" class="mom-grid" style="margin-top:8px"></div>
+  </div>
+
+  <!-- Detail Table -->
+  <div class="toolbar">
+    <label>月份</label>
+    <select id="t-month-sel" onchange="renderTrafficTable()">
+      <option value="">全部</option>
+    </select>
+    <label>搜尋</label>
+    <input type="text" id="t-search" placeholder="SKU / Collection / 品名"
+      style="width:200px" oninput="renderTrafficTable()">
+    <div class="spacer"></div>
+    <span id="t-row-count" style="color:var(--text3);font-size:11px"></span>
+  </div>
+  <div class="tbl-wrap" style="max-height:380px">
+    <table id="t-tbl">
+      <thead>
+        <tr style="background:#37474F">
+          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">月份</th>
+          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">SKU</th>
+          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">Collection</th>
+          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px;text-align:left">品名</th>
+          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">Sessions</th>
+          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">Page Views</th>
+          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">CVR%</th>
+          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">Units</th>
+          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">Revenue ($)</th>
+        </tr>
+      </thead>
+      <tbody id="t-tbody">
+        <tr><td colspan="9" class="empty">切換到「流量分析」標籤自動載入</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</div><!-- /tab-traffic -->
+
+<!-- Controls Modal -->
+<div class="modal-overlay" id="ctrl-modal">
+  <div class="modal" style="width:480px">
+    <h3>🎛️ 水位參數設定</h3>
+    <p style="font-size:11px;color:var(--text3);margin-bottom:14px">
+      修改後立即生效，不需重啟伺服器。
+    </p>
+    <div style="display:grid;grid-template-columns:1fr 100px;gap:8px 12px;align-items:center;font-size:12px;">
+      <div style="font-weight:700;color:var(--text2);font-size:10px;border-bottom:1px solid var(--border);padding-bottom:4px">參數</div>
+      <div style="font-weight:700;color:var(--text2);font-size:10px;border-bottom:1px solid var(--border);padding-bottom:4px;text-align:center">數值</div>
+
+      <div style="color:var(--text2)">生產天數</div>
+      <input type="number" id="c-production_days" min="1" step="1" style="text-align:center">
+
+      <div style="color:var(--text2)">海運天數</div>
+      <input type="number" id="c-sea_days" min="1" step="1" style="text-align:center">
+
+      <div style="border-top:1px solid var(--border);grid-column:1/-1;margin:2px 0"></div>
+
+      <div style="color:var(--text2)">AWD 目標月數 — <span style="color:#3949AB;font-weight:700">一般款</span></div>
+      <input type="number" id="c-awd_target_normal" min="0.1" step="0.1" style="text-align:center">
+
+      <div style="color:var(--text2)">AWD 目標月數 — <span style="color:#1976D2;font-weight:700">流量款</span></div>
+      <input type="number" id="c-awd_target_hero" min="0.1" step="0.1" style="text-align:center">
+
+      <div style="border-top:1px solid var(--border);grid-column:1/-1;margin:2px 0"></div>
+
+      <div style="color:var(--text2)">FBA + AWD 總上限月數（Cap）</div>
+      <input type="number" id="c-total_cap_months" min="0.5" step="0.5" style="text-align:center">
+
+      <div style="border-top:1px solid var(--border);grid-column:1/-1;margin:2px 0"></div>
+
+      <div style="color:var(--text2)">SZ 返單水位 — <span style="color:#3949AB;font-weight:700">一般款</span></div>
+      <input type="number" id="c-sz_level_normal" min="0.1" step="0.1" style="text-align:center">
+
+      <div style="color:var(--text2)">SZ 返單水位 — <span style="color:#1976D2;font-weight:700">流量款</span></div>
+      <input type="number" id="c-sz_level_hero" min="0.1" step="0.1" style="text-align:center">
+    </div>
+    <div style="margin-top:10px;padding:8px 10px;background:#f5f5f5;border-radius:6px;font-size:10px;color:var(--text3)">
+      💡 空運觸發閾值 = (生產天數 + 海運天數) ÷ 30 個月（目前顯示在下方）<br>
+      <span id="ctrl-air-hint" style="color:var(--orange);font-weight:600"></span>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" style="color:var(--text)" onclick="closeControls()">取消</button>
+      <button class="btn btn-primary" onclick="saveControls()">儲存並套用</button>
+    </div>
+  </div>
+</div>
+
+<!-- SKU Config Modal -->
+<div class="modal-overlay" id="cfg-modal">
+  <div class="modal">
+    <h3>⚙️ SKU 設定 — 類型 / 箱規 / ETA</h3>
+    <div style="margin-bottom:10px">
+      <input type="text" id="cfg-q" placeholder="搜尋 SKU…" style="width:100%;font-size:12px" oninput="filterCfg()">
+    </div>
+    <div class="cfg-row hdr">
+      <div>SKU</div><div>産品類型</div><div>Unit/Case</div><div>ETA</div>
+    </div>
+    <div id="cfg-list" style="max-height:360px;overflow:auto"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" style="color:var(--text)" onclick="closeCfg()">取消</button>
+      <button class="btn btn-primary" onclick="saveCfg()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let allData = [];
+let sortKey = 'collection';
+let sortAsc = true;
+let cfgData = [];
+
+// ── Column definitions (matching Excel A-AB order) ──────────────────────────
+const COLS = [
+  // key, header, width, align, render fn name
+  {k:'collection',       h:'Collection',             w:100, a:'left'},
+  {k:'parent_asin',      h:'Parent ASIN',             w:110, a:'left'},
+  {k:'asin',             h:'ASIN',                    w:110, a:'left'},
+  {k:'sku',              h:'SKU',                     w:130, a:'left', bold:true},
+  {k:'product_name',     h:'Name',                    w:220, a:'left', name:true},
+  {k:'product_type',     h:'産品類型',                 w:72,  a:'center', r:'typeTag'},
+  {k:'awd_target_months',h:'AWD目標月',               w:58,  a:'center', fmt:1},
+  {k:'sales_qty',        h:'Sales Qty (M)',            w:70,  a:'center', fmt:0},
+  {k:'fba_available',    h:'FBA Available\n(現貨)',     w:65,  a:'center', fmt:0},
+  {k:'fba_inbound',      h:'FBA Inbound\n(在途)',      w:65,  a:'center', fmt:0},
+  {k:'fba_total',        h:'FBA Total\n(現貨+在途)',   w:65,  a:'center', fmt:0},
+  {k:'fba_month',        h:'FBA Total\nMonth',         w:58,  a:'center', fmt:2},
+  {k:'awd_available',    h:'AWD\nAvailable',           w:65,  a:'center', fmt:0},
+  {k:'awd_inbound',      h:'AWD\nInbound',             w:60,  a:'center', fmt:0},
+  {k:'awd_outbound',     h:'AWD\nOutbound',            w:60,  a:'center', fmt:0},
+  {k:'awd_total',        h:'AWD Total\n(Avail+In-Out)',w:65,  a:'center', fmt:0},
+  {k:'awd_month',        h:'AWD Month',                w:58,  a:'center', fmt:2},
+  {k:'total_coverage',   h:'Total Coverage\nFBA+AWD(M)',w:70, a:'center', r:'covCell'},
+  {k:'sz_shippable',     h:'SZ現有庫存',               w:65,  a:'center', fmt:0},
+  {k:'sz_reorder_level', h:'返單水位',                  w:58,  a:'center', fmt:1},
+  {k:'eta',              h:'ETA',                      w:70,  a:'center'},
+  {k:'unit_per_case',    h:'Unit/Case',                w:55,  a:'center', fmt:0},
+  {k:'total_pipeline',   h:'Total Pipeline (M)',        w:70,  a:'center', fmt:2},
+  {k:'immediate_coverage',h:'Immediate\nCoverage',     w:65,  a:'center', fmt:2},
+  {k:'awd_replen_qty',   h:'AWD 需補量',               w:65,  a:'center', r:'replenCell'},
+  {k:'sz_available_qty', h:'SZ 可出量',                w:60,  a:'center', fmt:0},
+  {k:'sea_shipment_qty', h:'建議海運量\n（箱整）',       w:70,  a:'center', r:'seaCell'},
+  {k:'air_alert',        h:'🚨 空運警示',              w:80,  a:'center', r:'airTag'},
+  {k:'cap_alert',        h:'3M Cap 警示',              w:78,  a:'center', r:'capTag'},
+];
+
+// Build header row
+(function(){
+  const tr = document.getElementById('hdr');
+  COLS.forEach((c,i) => {
+    const th = document.createElement('th');
+    th.innerHTML = c.h.replace(/\n/g,'<br>');
+    th.dataset.i = i;
+    th.addEventListener('click', () => {
+      if(sortKey===c.k) sortAsc=!sortAsc; else{sortKey=c.k;sortAsc=true;}
+      document.querySelectorAll('#hdr th').forEach(t=>t.classList.remove('asc','dsc'));
+      th.classList.add(sortAsc?'asc':'dsc');
+      render();
+    });
+    tr.appendChild(th);
+  });
+})();
+
+// ── Render helpers ────────────────────────────────────────────────────────────
+const n = (v, dec) => {
+  if(v===null||v===undefined) return '—';
+  if(dec===undefined) return String(v||'');
+  return dec ? Number(v).toFixed(dec) : Number(v).toLocaleString();
+};
+
+const typeTag = r => {
+  if(r.product_type==='流量款') return `<span class="badge b-hero">流量款</span>`;
+  if(r.product_type==='一般款') return `<span class="badge b-norm">一般款</span>`;
+  return `<span style="color:var(--text3);font-size:10px">未設定</span>`;
+};
+
+const covCell = r => {
+  const v = r.total_coverage;
+  if(v===null||v===undefined) return '—';
+  const cls = v<2.33?'cov-danger':v<2.0?'cov-warn':v>3.0?'cov-over':'cov-ok';
+  return `<span class="${cls}">${Number(v).toFixed(2)}</span>`;
+};
+
+const replenCell = r => {
+  const v = r.awd_replen_qty;
+  if(v===null||v===undefined) return '—';
+  return v>0 ? `<span class="hi-blue">${Number(v).toLocaleString()}</span>` : n(v,0);
+};
+
+const seaCell = r => {
+  const v = r.sea_shipment_qty;
+  if(!v) return '—';
+  return `<span class="hi-green">${Number(v).toLocaleString()}</span>`;
+};
+
+const airTag = r => r.air_alert
+  ? `<span class="badge b-air">${r.air_alert}</span>` : '';
+
+const capTag = r => {
+  if(!r.cap_alert) return '';
+  const cls = r.cap_alert.includes('超過')?'b-red':r.cap_alert.includes('接近')?'b-yellow':'b-green';
+  return `<span class="badge ${cls}">${r.cap_alert}</span>`;
+};
+
+const renderers = {typeTag,covCell,replenCell,seaCell,airTag,capTag};
+
+function cellVal(col, row) {
+  if(col.r) return renderers[col.r](row);
+  if(col.fmt!==undefined) return n(row[col.k], col.fmt);
+  const v = row[col.k];
+  return (v===null||v===undefined||v==='') ? '' : String(v);
+}
+
+// ── Data & Render ─────────────────────────────────────────────────────────────
+async function loadData() {
+  document.getElementById('tbody').innerHTML =
+    '<tr><td colspan="28" class="empty"><div class="spinner"></div> 載入中...</td></tr>';
+  try {
+    const [repRes, catRes, awdRes, szRes] = await Promise.all([
+      fetch(`${API}/replenishment`),
+      fetch(`${API}/etl/catalog/status`),
+      fetch(`${API}/etl/awd/status`),
+      fetch(`${API}/etl/sz/status`),
+    ]);
+    const rep = await repRes.json();
+    const cat = await catRes.json();
+    const awd = await awdRes.json();
+    const sz  = await szRes.json();
+
+    allData = rep.data || [];
+
+    // KPIs
+    document.getElementById('k-total').textContent = allData.length;
+    document.getElementById('k-total-sub').textContent = `顯示 ${allData.length} 筆`;
+    document.getElementById('k-air').textContent   = allData.filter(r=>r.air_alert).length;
+    document.getElementById('k-cap').textContent   = allData.filter(r=>r.cap_alert==='🔴 超過上限').length;
+    document.getElementById('k-sea').textContent   = allData.filter(r=>r.sea_shipment_qty>0).length;
+
+    document.getElementById('k-cat').textContent   = cat.total_skus||0;
+    document.getElementById('k-cat-sub').textContent = cat.last_upload
+      ? '更新:'+cat.last_upload.substring(0,10) : '尚未上傳';
+
+    document.getElementById('k-awd').textContent   = awd.total_skus||0;
+    const awdDate = awd.last_sync||(awd.run&&awd.run.finished_at);
+    document.getElementById('k-awd-sub').textContent = awdDate
+      ? '同步:'+awdDate.substring(0,10)
+      : (awd.run&&awd.run.status==='running')?'⏳ 同步中...':'尚未同步';
+
+    document.getElementById('k-sz').textContent    = sz.total_skus||0;
+    document.getElementById('k-sz-sub').textContent = sz.last_upload
+      ? '更新:'+sz.last_upload.substring(0,10) : '尚未上傳';
+
+    // Populate Collection filter
+    const colls = [...new Set(allData.map(r=>r.collection||'').filter(Boolean))].sort();
+    const sel = document.getElementById('f-coll');
+    sel.innerHTML = '<option value="">全部</option>' +
+      colls.map(c=>`<option value="${c}">${c}</option>`).join('');
+
+    document.getElementById('lastRefresh').textContent =
+      '更新: ' + new Date().toLocaleTimeString('zh-TW');
+
+    render();
+  } catch(e) {
+    document.getElementById('tbody').innerHTML =
+      `<tr><td colspan="28" class="empty">⚠️ API 連線失敗: ${e.message}</td></tr>`;
+  }
+}
+
+function render() {
+  const q     = document.getElementById('q').value.toLowerCase();
+  const fType = document.getElementById('f-type').value;
+  const fAlt  = document.getElementById('f-alert').value;
+  const fColl = document.getElementById('f-coll').value;
+
+  let rows = allData.filter(r => {
+    if(q && !['collection','parent_asin','asin','sku','product_name']
+        .some(k => (r[k]||'').toLowerCase().includes(q))) return false;
+    if(fType && r.product_type !== fType) return false;
+    if(fAlt === 'air' && !r.air_alert) return false;
+    if(fAlt === 'cap' && r.cap_alert !== '🔴 超過上限') return false;
+    if(fAlt === 'sea' && !(r.sea_shipment_qty > 0)) return false;
+    if(fColl && r.collection !== fColl) return false;
+    return true;
+  });
+
+  // Sort
+  rows = rows.slice().sort((a,b) => {
+    let av = a[sortKey], bv = b[sortKey];
+    if(av==null) av=''; if(bv==null) bv='';
+    const res = typeof av==='number'&&typeof bv==='number'
+      ? av - bv : String(av).localeCompare(String(bv));
+    return sortAsc ? res : -res;
+  });
+
+  document.getElementById('row-count').textContent = `顯示 ${rows.length} / ${allData.length} 筆`;
+  document.getElementById('k-total-sub').textContent = `已載入 ${allData.length} 筆`;
+
+  if(!rows.length){
+    document.getElementById('tbody').innerHTML =
+      '<tr><td colspan="29" class="empty">無符合條件的資料</td></tr>';
+    return;
+  }
+
+  document.getElementById('tbody').innerHTML = rows.map(r => {
+    const cells = COLS.map(col => {
+      let cls, title = '';
+      if(col.name) {
+        cls = 'name-cell';
+        title = ` title="${(r[col.k]||'').replace(/"/g,'&quot;')}"`;
+      } else {
+        cls = col.a==='left' ? (col.bold?'sku':'left') : 'num';
+        if(col.a==='left') title = ` title="${(r[col.k]||'').replace(/"/g,'&quot;')}"`;
+      }
+      return `<td class="${cls}"${title}>${cellVal(col,r)}</td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+}
+
+// ── File uploads ──────────────────────────────────────────────────────────────
+const UPLOAD_URLS = {
+  catalog: '/etl/catalog/upload',
+  sz:      '/etl/sz/upload',
+  awd:     '/etl/awd/upload',
+};
+
+async function uploadFile(type) {
+  const input  = document.getElementById(`${type}-file`);
+  const status = document.getElementById(`${type}-status`);
+  if(!input.files.length){ status.textContent='請選擇檔案'; return; }
+
+  const fd = new FormData();
+  fd.append('file', input.files[0]);
+  status.textContent='上傳中…'; status.className='status-msg';
+
+  try{
+    const res  = await fetch(UPLOAD_URLS[type], {method:'POST', body:fd});
+    const data = await res.json();
+    if(res.ok){
+      status.textContent=`✓ ${data.rows_upserted} 筆`;
+      status.className='status-msg ok';
+      setTimeout(loadData, 400);
+    } else {
+      status.textContent=`✗ ${data.detail||'失敗'}`;
+      status.className='status-msg err';
+    }
+  } catch(e){
+    status.textContent=`✗ ${e.message}`;
+    status.className='status-msg err';
+  }
+}
+
+// ── AWD Auto Sync ─────────────────────────────────────────────────────────────
+async function syncAwd() {
+  const btn = document.getElementById('awd-btn');
+  const st  = document.getElementById('awd-status');
+  btn.disabled=true; btn.textContent='⏳ 同步中…'; st.textContent='';
+  try{
+    const res  = await fetch('/etl/awd/sync', {method:'POST'});
+    const data = await res.json();
+    if(res.ok){
+      st.textContent=`✓ 觸發 run#${data.run_id}，背景執行中`;
+      st.className='status-msg ok';
+      let tries=0;
+      const poll = setInterval(async()=>{
+        tries++;
+        try{
+          const s = await (await fetch('/etl/awd/status')).json();
+          const rs = s.run&&s.run.status;
+          if(rs==='success'){
+            clearInterval(poll);
+            st.textContent=`✓ 完成 ${s.total_skus} SKU`;
+            btn.disabled=false; btn.textContent='🔄 立即同步 AWD';
+            setTimeout(loadData,400);
+          } else if(rs==='error'||tries>30){
+            clearInterval(poll);
+            st.textContent = rs==='error'
+              ? `✗ ${s.run.error_message||'同步失敗'}` : '⏳ 仍在執行，請稍後';
+            btn.disabled=false; btn.textContent='🔄 立即同步 AWD';
+          }
+        }catch(_){}
+      }, 2000);
+    } else {
+      st.textContent=`✗ ${data.detail||'觸發失敗'}`; st.className='status-msg err';
+      btn.disabled=false; btn.textContent='🔄 立即同步 AWD';
+    }
+  } catch(e){
+    st.textContent=`✗ ${e.message}`; st.className='status-msg err';
+    btn.disabled=false; btn.textContent='🔄 立即同步 AWD';
+  }
+}
+
+// ── CSV Export ────────────────────────────────────────────────────────────────
+function exportCsv(){ window.open('/replenishment/export','_blank'); }
+
+// ── SKU Config Modal ──────────────────────────────────────────────────────────
+function openCfg(){
+  cfgData = [...allData];
+  renderCfg(cfgData);
+  document.getElementById('cfg-modal').classList.add('open');
+  document.getElementById('cfg-q').value='';
+}
+function closeCfg(){ document.getElementById('cfg-modal').classList.remove('open'); }
+
+function renderCfg(rows){
+  document.getElementById('cfg-list').innerHTML = rows.map(r=>`
+    <div class="cfg-row">
+      <div style="font-size:11px;font-weight:600">${r.sku}<br>
+        <span style="font-weight:400;color:var(--text3);font-size:10px">${r.collection||''}</span></div>
+      <select id="ct-${r.sku}" style="font-size:11px">
+        <option value="" ${!r.product_type?'selected':''}>未設定</option>
+        <option value="流量款" ${r.product_type==='流量款'?'selected':''}>流量款</option>
+        <option value="一般款" ${r.product_type==='一般款'?'selected':''}>一般款</option>
+      </select>
+      <input id="cu-${r.sku}" type="number" min="1" value="${r.unit_per_case||1}" style="font-size:11px;text-align:center">
+      <input id="ce-${r.sku}" type="text" value="${r.eta||''}" placeholder="e.g. 05/01" style="font-size:11px">
+    </div>`).join('') || '<div class="empty">無資料</div>';
+}
+
+function filterCfg(){
+  const q = document.getElementById('cfg-q').value.toLowerCase();
+  renderCfg(cfgData.filter(r=>(r.sku||'').toLowerCase().includes(q)));
+}
+
+async function saveCfg(){
+  const payload = cfgData.map(r=>{
+    const te = document.getElementById(`ct-${r.sku}`);
+    if(!te) return null;
+    return {
+      sku: r.sku,
+      product_type: te.value,
+      unit_per_case: parseInt(document.getElementById(`cu-${r.sku}`)?.value)||1,
+      eta: document.getElementById(`ce-${r.sku}`)?.value||'',
+    };
+  }).filter(Boolean);
+
+  try{
+    const res = await fetch('/replenishment/sku-config',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    closeCfg();
+    await loadData();
+    // brief toast
+    const t = document.createElement('div');
+    t.textContent = `✓ 已儲存 ${data.updated} 個 SKU`;
+    Object.assign(t.style,{position:'fixed',bottom:'20px',right:'20px',
+      background:'#333',color:'#fff',padding:'10px 16px',borderRadius:'8px',
+      fontSize:'13px',zIndex:'999',transition:'opacity .3s'});
+    document.body.appendChild(t);
+    setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},2500);
+  } catch(e){ alert('儲存失敗: '+e.message); }
+}
+
+document.getElementById('cfg-modal').addEventListener('click',function(e){
+  if(e.target===this) closeCfg();
+});
+
+// ── Controls Modal ────────────────────────────────────────────────────────────
+async function openControls() {
+  try {
+    const res  = await fetch('/replenishment/controls');
+    const data = await res.json();
+    const keys = ['production_days','sea_days','awd_target_normal','awd_target_hero',
+                  'total_cap_months','sz_level_normal','sz_level_hero'];
+    keys.forEach(k => {
+      const el = document.getElementById(`c-${k}`);
+      if(el) el.value = data[k]?.value ?? '';
+    });
+    _updateAirHint();
+    document.getElementById('ctrl-modal').classList.add('open');
+  } catch(e) { alert('載入失敗: ' + e.message); }
+}
+
+function closeControls() {
+  document.getElementById('ctrl-modal').classList.remove('open');
+}
+
+function _updateAirHint() {
+  const p = parseFloat(document.getElementById('c-production_days')?.value)||30;
+  const s = parseFloat(document.getElementById('c-sea_days')?.value)||40;
+  const threshold = ((p + s) / 30).toFixed(2);
+  const el = document.getElementById('ctrl-air-hint');
+  if(el) el.textContent = `目前空運觸發閾值 = (${p} + ${s}) ÷ 30 = ${threshold} 個月`;
+}
+
+// 即時更新 hint
+['c-production_days','c-sea_days'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', _updateAirHint);
+});
+
+async function saveControls() {
+  const keys = ['production_days','sea_days','awd_target_normal','awd_target_hero',
+                'total_cap_months','sz_level_normal','sz_level_hero'];
+  const payload = {};
+  for(const k of keys) {
+    const el = document.getElementById(`c-${k}`);
+    if(el && el.value !== '') payload[k] = parseFloat(el.value);
+  }
+  try {
+    const res  = await fetch('/replenishment/controls', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    if(!res.ok) throw new Error((await res.json()).detail || '儲存失敗');
+    closeControls();
+    await loadData();
+    const t = document.createElement('div');
+    t.textContent = '✓ 水位參數已更新，重新計算完成';
+    Object.assign(t.style,{position:'fixed',bottom:'20px',right:'20px',
+      background:'#333',color:'#fff',padding:'10px 16px',borderRadius:'8px',
+      fontSize:'13px',zIndex:'999'});
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(), 2800);
+  } catch(e) { alert('儲存失敗: ' + e.message); }
+}
+
+document.getElementById('ctrl-modal').addEventListener('click', function(e){
+  if(e.target===this) closeControls();
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadData();
+
+// ════════════════════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ════════════════════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-content').forEach(c =>
+    c.classList.toggle('active', c.id === 'tab-' + tab));
+  if (tab === 'traffic' && !trafficRaw) loadTraffic();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TRAFFIC DASHBOARD
+// ════════════════════════════════════════════════════════════════════════════
+let trafficRaw  = null;   // raw API response
+let tCharts     = {};     // Chart.js instances keyed by canvas id
+let tFiltered   = null;   // currently filtered slice
+
+const PIE_COLORS = [
+  '#1976D2','#E65100','#2E7D32','#6A1B9A','#AD1457',
+  '#00838F','#F57F17','#4527A0','#37474F','#BF360C',
+  '#1B5E20','#880E4F','#0D47A1','#558B2F','#4E342E',
+];
+
+// ── Load & render ─────────────────────────────────────────────────────────
+async function loadTraffic() {
+  const kpis = document.getElementById('t-kpis');
+  kpis.innerHTML = `<div class="card c-blue"><div class="lbl">載入中</div>
+    <div class="val"><div class="spinner"></div></div></div>`;
+  try {
+    const res = await fetch('/etl/traffic/data');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    trafficRaw = await res.json();
+    _populateCollFilter();
+    _populateMonthSel();
+    _initDateRange();          // set input[type=month] bounds + default 12M
+    applyTrafficFilter();
+  } catch(e) {
+    kpis.innerHTML = `<div class="card c-red">
+      <div class="lbl">載入失敗</div><div class="val" style="font-size:13px">⚠️</div>
+      <div class="sub">${e.message}</div></div>`;
+  }
+}
+
+// ── Date range helpers ────────────────────────────────────────────────────
+function _initDateRange() {
+  const avail    = trafficRaw.available_months;  // DESC order
+  const maxMonth = avail[0];
+  const minMonth = avail[avail.length - 1];
+
+  ['t-from','t-to'].forEach(id => {
+    const el = document.getElementById(id);
+    el.min = minMonth;
+    el.max = maxMonth;
+  });
+
+  // Default active preset: 12M
+  document.getElementById('t-to').value = maxMonth;
+  const [y, m] = maxMonth.split('-').map(Number);
+  let fm = m - 11, fy = y;
+  while (fm <= 0) { fm += 12; fy--; }
+  const fromDef = `${fy}-${String(fm).padStart(2,'0')}`;
+  document.getElementById('t-from').value = fromDef < minMonth ? minMonth : fromDef;
+}
+
+function setPreset(n, btn) {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const avail    = trafficRaw?.available_months || [];
+  if (!avail.length) return;
+  const maxMonth = avail[0];
+  const minMonth = avail[avail.length - 1];
+
+  let fromMonth;
+  if (n === 0) {
+    fromMonth = minMonth;
+  } else {
+    const [y, m] = maxMonth.split('-').map(Number);
+    let fm = m - n + 1, fy = y;
+    while (fm <= 0) { fm += 12; fy--; }
+    fromMonth = `${fy}-${String(fm).padStart(2,'0')}`;
+    if (fromMonth < minMonth) fromMonth = minMonth;
+  }
+
+  document.getElementById('t-from').value = fromMonth;
+  document.getElementById('t-to').value   = maxMonth;
+  applyTrafficFilter();
+}
+
+function clearPreset() {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+}
+
+function _populateCollFilter() {
+  const sel = document.getElementById('t-coll');
+  const colls = [...new Set(trafficRaw.by_collection.map(r => r.collection))].sort();
+  sel.innerHTML = '<option value="">全部</option>' +
+    colls.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function _populateMonthSel() {
+  const sel = document.getElementById('t-month-sel');
+  sel.innerHTML = '<option value="">全部</option>' +
+    trafficRaw.available_months.map(m => `<option value="${m}">${m}</option>`).join('');
+}
+
+function applyTrafficFilter() {
+  if (!trafficRaw) return;
+  const from     = document.getElementById('t-from')?.value || '';   // YYYY-MM
+  const to       = document.getElementById('t-to')?.value   || '';
+  const collFilt = document.getElementById('t-coll')?.value || '';
+
+  // ── Filter detail rows (source of truth for all aggregates) ────────────
+  const filteredDetail = trafficRaw.detail.filter(r => {
+    if (from && r.month < from) return false;
+    if (to   && r.month > to)   return false;
+    if (collFilt && r.collection !== collFilt) return false;
+    return true;
+  });
+
+  // ── Re-aggregate monthly trends ─────────────────────────────────────────
+  const monthMap = {};
+  filteredDetail.forEach(r => {
+    if (!monthMap[r.month]) monthMap[r.month] = {
+      month: r.month, sessions: 0, page_views: 0, total_units: 0, total_revenue: 0,
+    };
+    monthMap[r.month].sessions      += r.sessions   || 0;
+    monthMap[r.month].page_views    += r.page_views || 0;
+    monthMap[r.month].total_units   += r.units      || 0;
+    monthMap[r.month].total_revenue += r.revenue    || 0;
+  });
+  const months = Object.values(monthMap)
+    .map(r => ({
+      ...r,
+      cvr: r.sessions > 0
+        ? Math.round(r.total_units / r.sessions * 10000) / 100
+        : 0,
+    }))
+    .sort((a, b) => a.month.localeCompare(b.month));
+
+  // ── Re-aggregate by Collection ──────────────────────────────────────────
+  const collMap = {};
+  filteredDetail.forEach(r => {
+    const c = r.collection || 'Unknown';
+    if (!collMap[c]) collMap[c] = { collection: c, sessions: 0, total_units: 0, total_revenue: 0 };
+    collMap[c].sessions      += r.sessions || 0;
+    collMap[c].total_units   += r.units    || 0;
+    collMap[c].total_revenue += r.revenue  || 0;
+  });
+  const byCollection = Object.values(collMap)
+    .sort((a, b) => b.total_revenue - a.total_revenue);
+
+  // ── Re-aggregate by SKU ─────────────────────────────────────────────────
+  const skuMap = {};
+  filteredDetail.forEach(r => {
+    const k = r.sku || '—';
+    if (!skuMap[k]) skuMap[k] = {
+      sku: r.sku, collection: r.collection, product_name: r.product_name,
+      sessions: 0, total_units: 0, total_revenue: 0,
+    };
+    skuMap[k].sessions      += r.sessions || 0;
+    skuMap[k].total_units   += r.units    || 0;
+    skuMap[k].total_revenue += r.revenue  || 0;
+  });
+  const topSkus = Object.values(skuMap)
+    .sort((a, b) => b.total_revenue - a.total_revenue);
+
+  tFiltered = { months, byCollection, topSkus };
+  renderTrafficDashboard();
+}
+
+// ── Render all ────────────────────────────────────────────────────────────
+function renderTrafficDashboard() {
+  if (!tFiltered) return;
+  const { months, byCollection, topSkus } = tFiltered;
+
+  // KPI
+  const totSessions = months.reduce((s, r) => s + (r.sessions  || 0), 0);
+  const totUnits    = months.reduce((s, r) => s + (r.total_units   || 0), 0);
+  const totRevenue  = months.reduce((s, r) => s + (r.total_revenue || 0), 0);
+  const avgCvr      = totSessions > 0
+    ? (totUnits / totSessions * 100).toFixed(2) : '0.00';
+
+  document.getElementById('t-kpis').innerHTML = `
+    <div class="card c-blue">
+      <div class="lbl">Sessions</div>
+      <div class="val">${fmtK(totSessions)}</div>
+      <div class="sub">期間合計</div>
+    </div>
+    <div class="card c-green">
+      <div class="lbl">整體 CVR%</div>
+      <div class="val">${avgCvr}%</div>
+      <div class="sub">Units ÷ Sessions</div>
+    </div>
+    <div class="card c-orange">
+      <div class="lbl">Units Ordered</div>
+      <div class="val">${fmtK(totUnits)}</div>
+      <div class="sub">期間合計</div>
+    </div>
+    <div class="card c-blue">
+      <div class="lbl">Revenue</div>
+      <div class="val">$${fmtRev(totRevenue)}</div>
+      <div class="sub">期間合計</div>
+    </div>`;
+
+  // Pie charts
+  const top10Rev   = [...topSkus].sort((a,b) => b.total_revenue - a.total_revenue).slice(0,10);
+  const top10Units = [...topSkus].sort((a,b) => b.total_units   - a.total_units  ).slice(0,10);
+
+  renderPie('c-rev-coll',
+    byCollection.map(r => r.collection),
+    byCollection.map(r => r.total_revenue),
+    v => '$' + fmtRev(v));
+
+  renderPie('c-units-coll',
+    byCollection.map(r => r.collection),
+    byCollection.map(r => r.total_units),
+    v => fmtK(v) + ' units');
+
+  renderPie('c-rev-sku',
+    top10Rev.map(r => r.sku),
+    top10Rev.map(r => r.total_revenue),
+    v => '$' + fmtRev(v));
+
+  renderPie('c-units-sku',
+    top10Units.map(r => r.sku),
+    top10Units.map(r => r.total_units),
+    v => fmtK(v) + ' units');
+
+  // Line charts
+  renderComboChart('c-sessions-cvr', months,
+    { label:'Sessions', field:'sessions', color:'rgba(25,118,210,0.65)', yId:'y' },
+    { label:'CVR%',     field:'cvr',      color:'#E65100',               yId:'y1', yLabel:'CVR%' });
+
+  renderComboChart('c-sessions-units', months,
+    { label:'Sessions',      field:'sessions',    color:'rgba(25,118,210,0.65)', yId:'y' },
+    { label:'Units Ordered', field:'total_units', color:'#2E7D32',               yId:'y1', yLabel:'Units' });
+
+  // MoM
+  renderMoM(months);
+
+  // Detail table
+  renderTrafficTable();
+}
+
+// ── Pie chart ─────────────────────────────────────────────────────────────
+function renderPie(id, labels, data, fmtFn) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  if (tCharts[id]) tCharts[id].destroy();
+  const total = data.reduce((s,v) => s + (v||0), 0);
+  tCharts[id] = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: PIE_COLORS.slice(0, labels.length),
+        borderWidth: 1,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { boxWidth: 11, font: { size: 10 }, padding: 8 }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const pct = total > 0
+                ? (ctx.parsed / total * 100).toFixed(1) : 0;
+              return ` ${ctx.label}: ${fmtFn ? fmtFn(ctx.parsed) : ctx.parsed} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ── Combo bar+line chart ──────────────────────────────────────────────────
+function renderComboChart(id, months, bar, line) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  if (tCharts[id]) tCharts[id].destroy();
+  tCharts[id] = new Chart(ctx, {
+    data: {
+      labels: months.map(r => r.month),
+      datasets: [
+        {
+          type: 'bar',
+          label: bar.label,
+          data: months.map(r => r[bar.field] || 0),
+          backgroundColor: bar.color,
+          yAxisID: bar.yId,
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: line.label,
+          data: months.map(r => r[line.field] || 0),
+          borderColor: line.color,
+          backgroundColor: line.color.replace(')', ',0.1)').replace('rgb','rgba'),
+          yAxisID: line.yId,
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          order: 1,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x:  { ticks: { font: { size: 9 } } },
+        y:  { type: 'linear', position: 'left',
+              title: { display: true, text: bar.label,  font: { size: 9 } },
+              ticks: { font: { size: 9 } } },
+        y1: { type: 'linear', position: 'right',
+              grid: { drawOnChartArea: false },
+              title: { display: true, text: line.yLabel || line.label, font: { size: 9 } },
+              ticks: { font: { size: 9 } } },
+      },
+      plugins: { legend: { labels: { font: { size: 10 } } } }
+    }
+  });
+}
+
+// ── MoM comparison ────────────────────────────────────────────────────────
+function renderMoM(months) {
+  const el = document.getElementById('t-mom');
+  if (!el || months.length < 2) {
+    if (el) el.innerHTML = '<div style="color:var(--text3);font-size:11px;padding:8px">資料不足兩個月</div>';
+    return;
+  }
+  const prev = months[months.length - 2];
+  const cur  = months[months.length - 1];
+
+  const delta = (field) => {
+    const p = parseFloat(prev[field]) || 0;
+    const c = parseFloat(cur[field])  || 0;
+    if (p === 0) return c > 0 ? '+∞' : '—';
+    const pct = ((c - p) / Math.abs(p) * 100).toFixed(1);
+    return (pct > 0 ? '+' : '') + pct + '%';
+  };
+  const dcls = (field) => {
+    const p = parseFloat(prev[field]) || 0;
+    const c = parseFloat(cur[field])  || 0;
+    return c >= p ? 'delta-up' : 'delta-dn';
+  };
+
+  const fmt$ = v => '$' + (parseFloat(v)||0)
+    .toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+
+  el.innerHTML = `
+    <div class="mom-card">
+      <h4>🗓 ${prev.month}</h4>
+      <div class="mom-row"><span class="mom-lbl">Sessions</span>
+        <span class="mom-val">${(prev.sessions||0).toLocaleString()}</span></div>
+      <div class="mom-row"><span class="mom-lbl">CVR%</span>
+        <span class="mom-val">${parseFloat(prev.cvr||0).toFixed(2)}%</span></div>
+      <div class="mom-row"><span class="mom-lbl">Units</span>
+        <span class="mom-val">${(prev.total_units||0).toLocaleString()}</span></div>
+      <div class="mom-row"><span class="mom-lbl">Revenue</span>
+        <span class="mom-val">${fmt$(prev.total_revenue)}</span></div>
+    </div>
+    <div class="mom-card">
+      <h4>🗓 ${cur.month}</h4>
+      <div class="mom-row"><span class="mom-lbl">Sessions</span>
+        <span class="mom-val">${(cur.sessions||0).toLocaleString()}</span></div>
+      <div class="mom-row"><span class="mom-lbl">CVR%</span>
+        <span class="mom-val">${parseFloat(cur.cvr||0).toFixed(2)}%</span></div>
+      <div class="mom-row"><span class="mom-lbl">Units</span>
+        <span class="mom-val">${(cur.total_units||0).toLocaleString()}</span></div>
+      <div class="mom-row"><span class="mom-lbl">Revenue</span>
+        <span class="mom-val">${fmt$(cur.total_revenue)}</span></div>
+    </div>
+    <div class="mom-card">
+      <h4>📊 MoM 變化（${prev.month} → ${cur.month}）</h4>
+      <div class="mom-row"><span class="mom-lbl">Sessions</span>
+        <span class="mom-val ${dcls('sessions')}">${delta('sessions')}</span></div>
+      <div class="mom-row"><span class="mom-lbl">CVR%</span>
+        <span class="mom-val ${dcls('cvr')}">${delta('cvr')}</span></div>
+      <div class="mom-row"><span class="mom-lbl">Units</span>
+        <span class="mom-val ${dcls('total_units')}">${delta('total_units')}</span></div>
+      <div class="mom-row"><span class="mom-lbl">Revenue</span>
+        <span class="mom-val ${dcls('total_revenue')}">${delta('total_revenue')}</span></div>
+    </div>`;
+}
+
+// ── Detail table ──────────────────────────────────────────────────────────
+function renderTrafficTable() {
+  if (!trafficRaw) return;
+  const month = document.getElementById('t-month-sel')?.value || '';
+  const q     = (document.getElementById('t-search')?.value || '').toLowerCase();
+
+  let rows = trafficRaw.detail.filter(r => {
+    if (month && r.month !== month) return false;
+    if (q && !(r.sku||'').toLowerCase().includes(q) &&
+             !(r.collection||'').toLowerCase().includes(q) &&
+             !(r.product_name||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  document.getElementById('t-row-count').textContent = rows.length + ' 筆';
+  document.getElementById('t-tbody').innerHTML = rows.length
+    ? rows.map(r => `<tr>
+        <td class="num">${r.month}</td>
+        <td class="sku">${r.sku||''}</td>
+        <td class="left">${r.collection||''}</td>
+        <td class="name-cell" title="${(r.product_name||'').replace(/"/g,'&quot;')}">${r.product_name||''}</td>
+        <td class="num">${(r.sessions||0).toLocaleString()}</td>
+        <td class="num">${(r.page_views||0).toLocaleString()}</td>
+        <td class="num">${parseFloat(r.cvr||0).toFixed(2)}%</td>
+        <td class="num">${(r.units||0).toLocaleString()}</td>
+        <td class="num hi-green">$${parseFloat(r.revenue||0)
+          .toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="9" class="empty">無符合資料</td></tr>';
+}
+
+// ── Formatting helpers ────────────────────────────────────────────────────
+function fmtK(n) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
+  return (n || 0).toLocaleString();
+}
+function fmtRev(n) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
+  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
+  return (n || 0).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+</script>
+</body>
+</html>

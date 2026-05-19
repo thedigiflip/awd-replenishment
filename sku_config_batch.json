@@ -1,0 +1,1225 @@
+[
+  {
+    "sku": "MPHIPH218BK23",
+    "product_type": "流量款",
+    "unit_per_case": 48
+  },
+  {
+    "sku": "MPHIPH218CR23",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPHIPH218SI23",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD249333LB24",
+    "product_type": "流量款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD249333LT24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD241333LB24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD241333LT24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD229333LT25",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD221333LB25",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD229333LB25",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD221333LT25",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD249332BK24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD249332WH24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD241332BK24",
+    "product_type": "流量款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD241332WH24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD229332BK24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD229332WH24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD221332BK24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD221332WH24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD249346BK24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD241252BK24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD241252WH24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD229252BK24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD229252WH24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD221252BK24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MPD221252WH24",
+    "product_type": "一般款",
+    "unit_per_case": 25
+  },
+  {
+    "sku": "MAPAP2007MK24",
+    "product_type": "一般款",
+    "unit_per_case": 60
+  },
+  {
+    "sku": "MAPAP2007MR24",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MAPAP2007MA24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP2007MG24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP2255MK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP2255MR24",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MAPAP2255MA24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP2255MG24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP3255MK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP3255MR25",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MAPAP3255MA25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP3255MG25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP4007MK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP4007MR24",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MAPAP4007MA24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP4007MG24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP4255MK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP4255MR24",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MAPAP4255MA24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP4255MG24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP2078BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP2078SI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP2078IR24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP2078DG24",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MAPAP2078SP24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP3078BK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP3078SI25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP3078SS25",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MAPAP3078ML25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP3078CS25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP3078MU25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP3078MA25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP4078BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP4078SI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP4078IR24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAPAP4078DG24",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MPHIPH199BK23",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MPHIPH199SI23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH199CR23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH337BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH337SI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH337GG24",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MPHIPH338GG24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH338SI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH338BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH371AN25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH371BK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH371BP25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH371BD25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH371CR25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH371GG25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH371KH25",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MPHIPH371MU25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH371ML25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH371MY25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH371OG25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH371SI25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH370CR25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH370BK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH370SI25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH219ML23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH370BP25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH370GG25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH370MR25",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MPHIPH219MU24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH223SV23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH222BO23",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MPHIPH224BO23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH188ME23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH188AL23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH188BA23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH188PE23",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MPHIPH188GR23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH188BK23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH188FB23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH372KH25",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MPHIPH372BI25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH372OG25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH372VP25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH372ML25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH372MA25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH372AN25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH372SR25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH372RU25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH372BK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH158RS24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPMIPM066GR22",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH245AY24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH189BK23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH245CP24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH245CC24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH245CJ24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH245CS24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH245DN24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH189GR23",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MPHIPH245HS24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH245LN24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH245MI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH189WH23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH245SS24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPDA09239TR24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPDA29239TR24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPD241239TR24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPD249239TR24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW569236GD24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW459236RG24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW459236BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW569236ST24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW459236SI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW459236SV24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW459236MG24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW569236NA24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW412236GD24",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MAW341236RG24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW341236BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW412236ST24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW341236SI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW341236SV24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW341236MG24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW412236NA24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW241007BL22",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW241077FC22",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW241077FI22",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW241007GN22",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW241007DB22",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW241007PK23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW241007SI22",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW42M007DB24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW42M007TT24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW42M007RG24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW42M007SG24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW42M007SI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW2A5007BL22",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW2A5077FC22",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW2A5077FI22",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW2A5007GN22",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW2A5007DB22",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW2A5007PK23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW2A5007SI22",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW46M007DB24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW46M007TT24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW46M007RG24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW46M007SG24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW46M007SI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAWU49007DB23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAWU49007DB22",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAWU49007TT22",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MAW241078DB23",
+    "product_type": "流量款"
+  },
+  {
+    "sku": "MAW241078SI23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW241078SE23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW42M078BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW42M078CE24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW42M078SP24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW42M078SI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW2A5078DB23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW2A5078SI23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW2A5078SE23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW46M078BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW46M078CE24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW46M078SP24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAW46M078SI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAWU49078DB23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAWU49078SI23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MAWU49078SE23",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH661257LB24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH661352LB24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH667257LB24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH667352LB24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P257LB24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P352LB24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P352TT24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P257MK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P352MK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P257MV24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P257TT24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P257LB24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P352LB24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P352TT24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P352MK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P257MV24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P257MK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P257TT24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P257CO25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P257LK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P257TY25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P258LK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P258TY25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M257CO25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M257LK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M257TY25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M258LK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M258TY25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH661260BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH661260TR24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIS4260BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIS4260RS24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH667260BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH667260TR24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P260BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P260RS24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P260TT24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P260TR24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P260BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P260RS24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P260TT24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P260TR24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH173165TB25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P165CL25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P165MR25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P165TG25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P165TB25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M165CL25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M165MR25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M165TG25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M165TB25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17A165BK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17A165TB25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH661264BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH661264SI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH667264BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH667264SI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P264BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P264CW24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P264GR24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P264RS24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH66P264SI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P264BK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P264CW24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P264GR24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P264RS24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH67P264SI24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P264BK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P264BY25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P264SV25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M264BK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M264BY25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M264SV25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17A264BK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17A264SV25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH173396BK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH173396RS25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P396BK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P396CL25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P396RS25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P396SI25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M396BK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M396CL25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M396RS25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M396SI25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17A396BK25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17A396RS25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH173392AA25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH173392TA25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P392CL25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P392MG25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M392MG25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P392MS25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17P392TA25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M392CL25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M392MS25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17M392TA25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17A392AA25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPH17A392TA25",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH234GK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH234CX24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH234GY24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH234SC24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH234WB24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH233CY24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH233GY24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH233GK24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH233SC24",
+    "product_type": "一般款"
+  },
+  {
+    "sku": "MPHIPH233WR24",
+    "product_type": "一般款"
+  }
+]

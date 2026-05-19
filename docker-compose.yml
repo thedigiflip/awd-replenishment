@@ -1,0 +1,70 @@
+services:
+  # ─── Python FastAPI ETL Worker ───────────────────────────────────────────────
+  etl:
+    build:
+      context: ./etl
+      dockerfile: Dockerfile
+    container_name: sp_etl
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./etl:/app            # hot-reload during dev
+      - duckdb_data:/data     # DuckDB persistent storage
+    environment:
+      - DUCKDB_PATH=/data/sp_api.duckdb
+    depends_on: []
+    networks:
+      - sp_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── n8n Orchestration ───────────────────────────────────────────────────────
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: sp_n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-changeme}
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Asia/Taipei
+    networks:
+      - sp_network
+
+  # ─── DuckDB HTTP API (optional — for direct SQL query) ───────────────────────
+  # Uncomment if you want a standalone DuckDB REST endpoint
+  # duckdb_api:
+  #   image: datacatering/duckdb-http:latest
+  #   container_name: sp_duckdb
+  #   ports:
+  #     - "9000:9000"
+  #   volumes:
+  #     - duckdb_data:/data
+  #   networks:
+  #     - sp_network
+
+volumes:
+  duckdb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./duckdb
+  n8n_data:
+
+networks:
+  sp_network:
+    driver: bridge
