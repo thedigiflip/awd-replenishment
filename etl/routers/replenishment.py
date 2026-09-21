@@ -20,35 +20,72 @@ log = structlog.get_logger()
 router = APIRouter()
 _svc = ReplenishmentService()
 
-# ─── CSV 欄位順序（對應 Excel v4 欄位）──────────────────────────────────────
+# ─── CSV 欄位順序（對應 Dashboard 主表 group 順序）───────────────────────────
 _CSV_FIELDS = [
-    ("sku",               "SKU"),
-    ("asin",              "ASIN"),
-    ("product_name",      "Product Name"),
-    ("product_type",      "産品類型"),
-    ("awd_target_months", "AWD 目標月數"),
-    ("sales_qty",         "Sales Qty (M)"),
-    ("fba_available",     "FBA Available（現貨）"),
-    ("fba_inbound",       "FBA Inbound"),
-    ("fba_total",         "FBA Total"),
-    ("fba_month",         "FBA Total Month"),
-    ("awd_available",     "AWD Available"),
-    ("awd_inbound",       "AWD Inbound"),
-    ("awd_outbound",      "AWD Outbound"),
-    ("awd_total",         "AWD Total"),
-    ("awd_month",         "AWD Month"),
-    ("total_coverage",    "Total Coverage (M)"),
-    ("sz_shippable",      "SZ 可出庫"),
-    ("sz_reorder_level",  "SZ 返單水位"),
-    ("total_pipeline",    "Total Pipeline (M)"),
-    ("immediate_coverage","Immediate Coverage"),
-    ("awd_replen_qty",    "AWD 需補量"),
-    ("sz_available_qty",  "SZ 可出量"),
-    ("sea_shipment_qty",  "建議海運量"),
-    ("unit_per_case",     "Unit/Case"),
-    ("air_alert",         "🚨 空運警示"),
-    ("cap_alert",         "3M Cap 警示"),
-    ("stock_alert",       "📦 庫存警示"),
+    # 識別
+    ("collection",            "Collection"),
+    ("parent_asin",           "Parent ASIN"),
+    ("asin",                  "ASIN"),
+    ("sku",                   "SKU"),
+    ("product_name",          "Name"),
+    # 設定
+    ("product_type",          "産品類型"),
+    ("awd_target_months",     "AWD 目標月數"),
+    # 銷售
+    ("sales_qty",             "Sales Qty (M)"),
+    # FBA
+    ("fba_available",         "FBA Available（現貨）"),
+    ("fba_inbound",           "FBA Inbound（在途）"),
+    ("fba_total",             "FBA Total"),
+    ("fba_month",             "FBA Total Month"),
+    # AWD
+    ("awd_available",         "AWD Available"),
+    ("awd_inbound",           "AWD Inbound"),
+    ("awd_outbound",          "AWD Outbound"),
+    ("awd_total",             "AWD Total"),
+    ("awd_month",             "AWD Month"),
+    # Coverage
+    ("total_coverage",        "Total Coverage FBA+AWD (M)"),
+    ("cap_alert",             "5M Cap 警示"),
+    # 深圳倉庫（美國倉 + 欠數 + 佳樂倉）
+    ("safety_stock",          "安全庫存門檻"),
+    ("us_qty",                "美國倉"),
+    ("pending_qty",           "欠數 (已下單)"),
+    ("order_date",            "下單日期"),
+    ("expected_date",         "約定交期"),
+    ("factory_confirmed_date","工廠回覆交期"),
+    ("delivery_advance_days", "提前/延後天數"),
+    ("overdue_days",          "逾期天數"),
+    ("jl_qty",                "佳樂倉"),
+    ("unit_per_case",         "Unit/Case"),
+    ("us_month",              "美國倉 Month"),
+    ("us_virtual_month",      "美國虛擬 Month (含欠數)"),
+    ("sz_total_month",        "深圳倉庫總量 Month"),
+    ("transfer_qty",          "移倉數建議 (佳樂→美國)"),
+    # 返單計畫
+    ("reorder_alert",         "返單警示"),
+    ("reorder_qty",           "建議返單數量"),
+    ("case_reorder_qty",      "整箱返單數量"),
+    ("suggested_order_date",  "建議下單日"),
+    ("days_until_late",       "交期倒數 (天)"),
+    # AWD Replenishment
+    ("air_alert",             "🚨 空運警示"),
+    ("immediate_coverage",    "Immediate Coverage"),
+    ("awd_replen_qty",        "AWD 需補貨量"),
+    ("awd_replen_case_qty",   "AWD 需補量 (整箱)"),
+    ("awd_replen_case_cnt",   "AWD 需補箱數"),
+    ("total_pipeline",        "Total Pipeline (M)"),
+    # 其他警示 / 診斷欄位（dashboard 沒顯示，但保留於 CSV 供查詢）
+    ("stock_alert",           "📦 庫存警示"),
+    ("sz_reorder_level",      "SZ 返單水位保留數"),
+    ("sz_available_qty",      "SZ 可出量"),
+    ("sea_shipment_qty",      "建議海運量"),
+    ("days_can_last",         "現有可撐天數"),
+    ("lead_time_days",        "生產交期 (天)"),
+    ("case_reorder_count",    "返單箱數"),
+    # 同 ASIN 多 SKU 資訊
+    ("sku_count",             "SKU 數 (同 ASIN)"),
+    ("all_skus",              "全部 alias SKUs"),
 ]
 
 
@@ -63,7 +100,18 @@ async def get_replenishment(
         data = [r for r in data if r["air_alert"]]
     if hero_only:
         data = [r for r in data if r["product_type"] == "流量款"]
-    return JSONResponse({"count": len(data), "data": data})
+    # 附上 Controls 閾值，讓前端做動態著色
+    controls = await _svc.get_controls()
+    prod_d   = controls.get("production_days",   {}).get("value", 30.0)
+    sea_d    = controls.get("sea_days",          {}).get("value", 40.0)
+    cap_m    = controls.get("total_cap_months",  {}).get("value", 3.0)
+    return JSONResponse({
+        "count": len(data), "data": data,
+        "thresholds": {
+            "air_threshold":     round((prod_d + sea_d) / 30, 2),
+            "total_cap_months":  cap_m,
+        },
+    })
 
 
 @router.get("/export", summary="匯出 CSV")

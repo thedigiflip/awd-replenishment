@@ -22,6 +22,10 @@ from sp_api.base import SellingApiException
 from core.database import new_conn, db_write
 from core.sp_api_client import get_awd_api
 from services.base_service import BaseService
+from services.anomaly_detector import (
+    detect_and_record_anomalies,
+    snapshot_before,
+)
 
 log = structlog.get_logger()
 
@@ -86,6 +90,16 @@ class AwdService(BaseService):
         if not items:
             return 0
 
+        # ── 抓「前值快照」以便偵測異常 ───────────────────────────────────
+        # 只 track 有值的 SKU（減少雜訊）
+        import asyncio as _aio
+        before_inbound = await _aio.to_thread(
+            snapshot_before, "awd_inventory", "awd_inbound", "awd_inventory"
+        )
+        before_avail = await _aio.to_thread(
+            snapshot_before, "awd_inventory", "awd_available", "awd_inventory"
+        )
+
         now = datetime.now(tz=timezone.utc)
         rows = []
         for item in items:
@@ -113,7 +127,7 @@ class AwdService(BaseService):
                 else:
                     outbound += int(qty)
 
-            rows.append((sku, avail, inbound, outbound, json.dumps(item), now))
+            rows.append((sku, avail, inbound, outbound, now))
 
         if not rows:
             return 0
@@ -121,17 +135,71 @@ class AwdService(BaseService):
         def _write():
             conn = new_conn()
             try:
+                # ═══════════════════════════════════════════════════════════
+                # 「軟歸零」邏輯（v3 — 2026-08-20 修正）
+                # ═══════════════════════════════════════════════════════════
+                # 舊版直接 UPDATE 全表歸零再 upsert，但發現 SP-API AWD list_inventory
+                # 偶爾會漏傳某些 SKU（分頁遺漏、rate limit、暫時空回等）。
+                # 舊邏輯會誤殺這些 SKU（明明有貨卻歸零）。
+                #
+                # 新版只 upsert 有回傳的 SKU；沒回傳的 SKU 保留舊值，直到超過
+                # STALE_DAYS 天沒被 sync 到，才視為「已無庫存」並歸零。
+                # ═══════════════════════════════════════════════════════════
+                STALE_DAYS = 7  # 超過 7 天沒 sync → 歸零
+
+                # Step 1: upsert 這次 API 回傳的所有 SKU（更新 synced_at）
                 conn.executemany("""
                     INSERT OR REPLACE INTO awd_inventory
                         (sku, awd_available, awd_inbound, awd_outbound, synced_at)
                     VALUES (?, ?, ?, ?, ?)
-                """, [(r[0], r[1], r[2], r[3], r[5]) for r in rows])
+                """, rows)
+
+                # Step 2: 把「超過 STALE_DAYS 天沒更新」的 SKU 歸零（真正沒庫存了）
+                stale_result = conn.execute(f"""
+                    UPDATE awd_inventory
+                    SET awd_available = 0,
+                        awd_inbound   = 0,
+                        awd_outbound  = 0
+                    WHERE synced_at < now() - INTERVAL '{STALE_DAYS} days'
+                      AND (awd_available > 0 OR awd_inbound > 0 OR awd_outbound > 0)
+                """)
                 conn.commit()
+
+                stale_zeroed = 0
+                try:
+                    stale_zeroed = stale_result.rowcount or 0
+                except Exception:
+                    pass
+
+                log.info("awd.upsert_stats",
+                         upserted=len(rows),
+                         stale_zeroed_after_days=STALE_DAYS,
+                         stale_zeroed=stale_zeroed)
                 return len(rows)
             finally:
                 conn.close()
 
-        return await db_write(_write)
+        result = await db_write(_write)
+
+        # ── 偵測異常（比對 before / after）──────────────────────────────
+        # 建構 after dict：以本次寫入的 rows 為主，未回傳的 SKU 沿用 before 值（因軟歸零）
+        after_inbound = {r[0]: r[2] for r in rows}   # sku → awd_inbound
+        after_avail   = {r[0]: r[1] for r in rows}   # sku → awd_available
+        # 未回傳的 SKU：因為軟歸零，7 天內保留 before 值
+        for sku, v in before_inbound.items():
+            after_inbound.setdefault(sku, v)
+        for sku, v in before_avail.items():
+            after_avail.setdefault(sku, v)
+
+        try:
+            await detect_and_record_anomalies("awd_inventory", "awd_inbound",
+                                              before_inbound, after_inbound)
+            await detect_and_record_anomalies("awd_inventory", "awd_available",
+                                              before_avail, after_avail)
+        except Exception as e:
+            log.warning("awd.anomaly_detect_failed", error=str(e))
+
+        return result
 
     async def get_count(self) -> dict:
         def _query():

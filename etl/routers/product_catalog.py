@@ -9,6 +9,7 @@ MAGEASY Anchor 欄位:
   C: (Child) ASIN
   D: Collection
   E: Name
+  F: COG (Cost of Goods, USD/unit)
 """
 
 import asyncio
@@ -17,7 +18,7 @@ from datetime import datetime, timezone
 
 import structlog
 import pandas as pd
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
 
 from core.database import new_conn, db_write
@@ -31,6 +32,7 @@ _PARENT_ALIASES = ["(Parent) ASIN", "Parent ASIN", "parent_asin", "ParentASIN"]
 _ASIN_ALIASES   = ["(Child) ASIN", "Child ASIN", "ASIN", "asin", "ChildASIN"]
 _COLL_ALIASES   = ["Collection", "collection", "系列"]
 _NAME_ALIASES   = ["Name", "name", "Product Name", "product_name", "商品名稱"]
+_COG_ALIASES    = ["COG", "cog", "Cost", "cost", "成本", "產品成本"]
 
 
 def _find(df: pd.DataFrame, aliases: list[str]) -> str | None:
@@ -41,7 +43,13 @@ def _find(df: pd.DataFrame, aliases: list[str]) -> str | None:
 
 
 @router.post("/upload", summary="上傳 MAGEASY Anchor（產品目錄）")
-async def upload_catalog(file: UploadFile = File(...)):
+async def upload_catalog(
+    file: UploadFile = File(...),
+    replace: bool = Query(
+        True,
+        description="True (預設) = 完全取代整個 product_catalog；False = 只 upsert (保留舊 SKU)",
+    ),
+):
     if not file.filename:
         raise HTTPException(400, "No file provided")
 
@@ -68,6 +76,7 @@ async def upload_catalog(file: UploadFile = File(...)):
     asin_col   = _find(df, _ASIN_ALIASES)
     coll_col   = _find(df, _COLL_ALIASES)
     name_col   = _find(df, _NAME_ALIASES)
+    cog_col    = _find(df, _COG_ALIASES)
 
     if not sku_col:
         raise HTTPException(422, f"找不到 SKU 欄位。實際欄位: {list(df.columns)}")
@@ -80,6 +89,15 @@ async def upload_catalog(file: UploadFile = File(...)):
         v = row.get(col, "")
         return str(v).strip() if pd.notna(v) and str(v).lower() != "nan" else ""
 
+    def _clean_num(row, col):
+        if not col:
+            return 0.0
+        v = row.get(col, 0)
+        try:
+            return float(str(v).replace(",", "")) if pd.notna(v) and str(v).lower() not in ("nan", "-", "") else 0.0
+        except Exception:
+            return 0.0
+
     rows = []
     for _, row in df.iterrows():
         sku = _clean(row, sku_col)
@@ -91,6 +109,7 @@ async def upload_catalog(file: UploadFile = File(...)):
             _clean(row, asin_col),
             _clean(row, coll_col),
             _clean(row, name_col),
+            _clean_num(row, cog_col),
             now,
         ))
 
@@ -100,25 +119,59 @@ async def upload_catalog(file: UploadFile = File(...)):
     def _write():
         conn = new_conn()
         try:
+            deleted = 0
+            if replace:
+                # 完全取代：保留 fba_fee（來自 SP-API Product Fees，非 Anchor 提供），
+                # 但把 Anchor 沒收錄的 SKU 整筆刪掉，避免舊資料殘留。
+                new_skus = tuple({r[0] for r in rows})
+                if new_skus:
+                    # DuckDB 支援 array parameter，用 NOT IN 刪掉不在新清單中的
+                    placeholders = ",".join(["?"] * len(new_skus))
+                    result = conn.execute(
+                        f"DELETE FROM product_catalog WHERE sku NOT IN ({placeholders})",
+                        list(new_skus),
+                    )
+                    # 取得 rowcount（DuckDB 沒有直接 rowcount，用差值計算）
+                    remaining = conn.execute(
+                        "SELECT COUNT(*) FROM product_catalog"
+                    ).fetchone()[0]
+                    deleted = remaining  # 先記錄清理後保留數
+                else:
+                    conn.execute("DELETE FROM product_catalog")
+
             conn.executemany("""
                 INSERT OR REPLACE INTO product_catalog
-                    (sku, parent_asin, asin, collection, product_name, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                    (sku, parent_asin, asin, collection, product_name, cog, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             """, rows)
             conn.commit()
-            return len(rows)
+
+            total_after = conn.execute(
+                "SELECT COUNT(*) FROM product_catalog"
+            ).fetchone()[0]
+            return {"upserted": len(rows), "total_after": total_after}
         finally:
             conn.close()
 
-    count = await db_write(_write)
-    log.info("catalog.uploaded", rows=count, file=file.filename)
+    result = await db_write(_write)
+    log.info(
+        "catalog.uploaded",
+        rows=result["upserted"],
+        total_after=result["total_after"],
+        file=file.filename,
+        cog_col=cog_col,
+        replace=replace,
+    )
     return JSONResponse({
         "status": "ok",
-        "rows_upserted": count,
+        "mode": "replace" if replace else "upsert",
+        "rows_upserted": result["upserted"],
+        "total_after": result["total_after"],
         "file": file.filename,
         "columns_detected": {
             "sku": sku_col, "parent_asin": parent_col,
-            "asin": asin_col, "collection": coll_col, "name": name_col,
+            "asin": asin_col, "collection": coll_col,
+            "name": name_col, "cog": cog_col,
         },
     })
 

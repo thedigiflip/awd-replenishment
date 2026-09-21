@@ -9,6 +9,8 @@ duckdb/
 
 # ── n8n 資料（包含 credentials）──────────────────
 n8n/
+# 例外：workflow JSON 檔要版本控制（不含機密，只有 placeholder credential id）
+!n8n/*.json
 
 # ── Python ───────────────────────────────────────
 __pycache__/

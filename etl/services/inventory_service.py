@@ -89,6 +89,17 @@ class InventoryService(BaseService):
         if not items:
             return 0
 
+        # 快照：抓「該 marketplace 最新 snapshot 的 fulfillable_quantity」當前值
+        # 只取本 marketplace 的資料，避免跨站 SKU 混合
+        import asyncio as _aio
+        from services.anomaly_detector import snapshot_before, detect_and_record_anomalies
+        before_fulfillable = await _aio.to_thread(
+            snapshot_before, "fba_inventory", "fulfillable_quantity", "inventory",
+            f"snapshot_date = (SELECT MAX(snapshot_date) FROM inventory WHERE marketplace_id='{marketplace_id}')"
+            f" AND marketplace_id='{marketplace_id}'",
+            False,  # include_marketplace=False（本 batch 全屬同一 mp，透過參數傳）
+        )
+
         now = datetime.now(tz=timezone.utc)
         rows = []
         for item in items:
@@ -137,7 +148,20 @@ class InventoryService(BaseService):
             finally:
                 conn.close()
 
-        return await db_write(_write)
+        n = await db_write(_write)
+
+        # ── 偵測異常 ─────────────────────────────────────────────────
+        # after: 這次寫入的 SKU → fulfillable_quantity
+        after_fulfillable = {r[3]: int(r[6] or 0) for r in rows if r[3]}
+        try:
+            await detect_and_record_anomalies(
+                "fba_inventory", "fulfillable_quantity",
+                before_fulfillable, after_fulfillable,
+                marketplace_id=marketplace_id,  # 標記異常屬於哪個站
+            )
+        except Exception as e:
+            log.warning("fba.anomaly_detect_failed", error=str(e))
+        return n
 
     async def get_count(self) -> dict:
         def _query():

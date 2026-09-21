@@ -5,99 +5,168 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mageasy 補貨儀表板</title>
 <style>
+/* ── Tableau-inspired design system ─────────────────────────────────────── */
 :root {
-  --bg:#f0f2f5; --card:#fff; --border:#e0e4eb;
-  --primary:#1976D2; --primary-dk:#1565C0; --primary-lt:#E3F2FD;
-  --green:#2E7D32; --green-bg:#E8F5E9;
-  --orange:#E65100; --orange-bg:#FFF3E0;
-  --red:#C62828; --red-bg:#FFEBEE;
-  --yellow-bg:#FFFDE7;
-  --text:#1a1a1a; --text2:#555; --text3:#999;
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:12px;}
+  /* Backgrounds */
+  --bg:        #F4F4F4;
+  --card:      #FFFFFF;
+  --border:    #E0E0E0;
 
-/* top bar */
-.topbar{position:sticky;top:0;z-index:200;height:52px;background:var(--primary);
-  display:flex;align-items:center;padding:0 16px;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.25);}
-.topbar h1{color:#fff;font-size:15px;font-weight:700;flex:1;}
-.sync-info{color:rgba(255,255,255,.65);font-size:11px;}
-.btn{padding:6px 13px;border-radius:6px;border:none;cursor:pointer;font-size:12px;
-  font-weight:600;display:inline-flex;align-items:center;gap:4px;}
-.btn-white{background:#fff;color:var(--primary);}
-.btn-white:hover{background:#e3f2fd;}
-.btn-outline{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);}
-.btn-outline:hover{background:rgba(255,255,255,.15);}
+  /* Tableau signature palette */
+  --primary:    #4E79A7;   /* Tableau Blue */
+  --primary-dk: #3A6694;
+  --primary-lt: #EBF3FA;
+  --green:      #59A14F;   /* Tableau Green */
+  --green-bg:   #EEF7ED;
+  --orange:     #F28E2B;   /* Tableau Orange */
+  --orange-bg:  #FEF6ED;
+  --red:        #E15759;   /* Tableau Red */
+  --red-bg:     #FDEEED;
+  --teal:       #76B7B2;   /* Tableau Teal */
+  --yellow-bg:  #FEF9E7;
+
+  /* Typography */
+  --text:  #2C2C2C;
+  --text2: #5C5C5C;
+  --text3: #9E9E9E;
+
+  /* Topbar */
+  --topbar-bg: #1F2D3D;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.10);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family: 'Segoe UI', -apple-system, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
+.topbar{
+  position:sticky;top:0;z-index:200;height:52px;
+  background: var(--topbar-bg);
+  display:flex;align-items:center;padding:0 20px;gap:12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+.topbar h1{color:#fff;font-size:15px;font-weight:600;flex:1;letter-spacing:.02em;}
+.sync-info{color:rgba(255,255,255,.55);font-size:11px;}
+.btn{padding:6px 14px;border-radius:5px;border:none;cursor:pointer;font-size:11px;
+  font-weight:600;display:inline-flex;align-items:center;gap:5px;letter-spacing:.01em;
+  transition:all .15s;}
+.btn-white{background:#fff;color:var(--primary);border:1px solid var(--border);}
+.btn-white:hover{background:var(--primary-lt);border-color:var(--primary);}
+.btn-outline{background:transparent;color:rgba(255,255,255,.9);border:1px solid rgba(255,255,255,.35);}
+.btn-outline:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.7);}
 .btn-primary{background:var(--primary);color:#fff;}
 .btn-primary:hover{background:var(--primary-dk);}
-.btn-green{background:#388E3C;color:#fff;}
-.btn-green:hover{background:var(--green);}
-.btn-orange{background:#F57F17;color:#fff;}
-.btn-orange:hover{background:var(--orange);}
+.btn-green{background:var(--green);color:#fff;}
+.btn-green:hover{filter:brightness(1.1);}
+.btn-orange{background:var(--orange);color:#fff;}
+.btn-orange:hover{filter:brightness(1.1);}
 .btn-sm{padding:4px 10px;font-size:11px;}
-.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
 
-.page{max-width:100%;padding:12px 16px;}
+.page{max-width:100%;padding:14px 20px;}
 
-/* kpi cards */
-.cards{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
-.card{background:var(--card);border-radius:9px;padding:12px 14px;border:1px solid var(--border);min-width:130px;}
-.card .lbl{font-size:10px;color:var(--text2);margin-bottom:3px;}
-.card .val{font-size:20px;font-weight:700;}
-.card .sub{font-size:10px;color:var(--text3);margin-top:2px;}
-.card.c-red{border-left:3px solid var(--red);}
-.card.c-orange{border-left:3px solid #F57F17;}
-.card.c-green{border-left:3px solid var(--green);}
-.card.c-blue{border-left:3px solid var(--primary);}
+/* ── KPI cards ───────────────────────────────────────────────────────────── */
+.cards{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.card{
+  background:var(--card);
+  border-radius:6px;
+  padding:13px 16px;
+  border:1px solid var(--border);
+  box-shadow:var(--shadow-sm);
+  min-width:130px;
+}
+.card .lbl{font-size:10px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+.card .val{font-size:22px;font-weight:700;color:var(--text);}
+.card .sub{font-size:10px;color:var(--text3);margin-top:3px;}
+.card.c-red   {border-left:3px solid var(--red);   }
+.card.c-orange{border-left:3px solid var(--orange); }
+.card.c-green {border-left:3px solid var(--green);  }
+.card.c-blue  {border-left:3px solid var(--primary);}
 
-/* upload section */
-.upload-row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
-.upload-card{background:var(--card);border:1px solid var(--border);border-radius:9px;
-  padding:12px 14px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:220px;}
-.upload-card .title{font-size:12px;font-weight:700;color:var(--text2);}
+/* ── Upload section ──────────────────────────────────────────────────────── */
+.upload-row{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.upload-card{
+  background:var(--card);border:1px solid var(--border);border-radius:6px;
+  padding:12px 16px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:220px;
+  box-shadow:var(--shadow-sm);
+}
+.upload-card .title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;}
 .upload-card .hint{font-size:10px;color:var(--text3);}
 .upload-row-inner{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
 .status-msg{font-size:11px;font-weight:600;}
 .status-msg.ok{color:var(--green);}
 .status-msg.err{color:var(--red);}
 
-/* toolbar */
-.toolbar{background:var(--card);border:1px solid var(--border);border-radius:9px;
-  padding:10px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
-.toolbar label{font-size:11px;color:var(--text2);white-space:nowrap;}
-input[type=text],select{border:1px solid var(--border);border-radius:5px;
-  padding:5px 9px;font-size:11px;outline:none;background:#fafafa;}
-input[type=text]:focus,select:focus{border-color:var(--primary);background:#fff;}
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+.toolbar{
+  background:var(--card);border:1px solid var(--border);border-radius:6px;
+  padding:9px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:center;
+  flex-wrap:wrap;box-shadow:var(--shadow-sm);
+}
+.toolbar label{font-size:11px;color:var(--text2);white-space:nowrap;font-weight:500;}
+input[type=text],select{
+  border:1px solid var(--border);border-radius:4px;
+  padding:5px 9px;font-size:11px;outline:none;background:#FAFAFA;
+  color:var(--text);font-family:inherit;
+}
+input[type=text]:focus,select:focus{border-color:var(--primary);background:#fff;box-shadow:0 0 0 2px rgba(78,121,167,.15);}
 .spacer{flex:1;}
 
-/* table */
-.tbl-wrap{background:var(--card);border:1px solid var(--border);border-radius:9px;
-  overflow:auto;max-height:calc(100vh - 310px);}
-table{width:100%;border-collapse:collapse;font-size:11px;}
-thead tr{position:sticky;top:0;z-index:10;}
-thead th{background:#37474F;color:#fff;padding:7px 8px;text-align:center;
-  white-space:nowrap;font-size:10px;font-weight:600;
-  border-right:1px solid rgba(255,255,255,.1);cursor:pointer;user-select:none;}
-thead th:hover{background:#546E7A;}
+/* ── Table ───────────────────────────────────────────────────────────────── */
+.tbl-wrap{
+  background:var(--card);border:1px solid var(--border);border-radius:6px;
+  overflow:auto;max-height:calc(100vh - 310px);
+  box-shadow:var(--shadow-sm);
+}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px;}
+/* 兩段式置頂：group header 在最上（top:0），main header 貼在 group 下方 */
+thead tr.grp th{position:sticky;top:0;z-index:12;}
+thead tr:not(.grp) th{position:sticky;top:24px;z-index:11;
+  box-shadow:0 1px 0 rgba(255,255,255,.15);
+}
+thead th{
+  background:#1F2D3D;color:#E8ECF0;
+  padding:8px 10px;text-align:center;white-space:nowrap;
+  font-size:10px;font-weight:600;letter-spacing:.04em;
+  border-right:1px solid rgba(255,255,255,.08);
+  cursor:pointer;user-select:none;
+  transition:background .15s;
+}
+thead th:hover{background:#2D4057;}
 thead th.asc::after{content:" ↑";}
 thead th.dsc::after{content:" ↓";}
 
 /* column group headers */
-thead tr.grp th{background:#263238;font-size:9px;color:rgba(255,255,255,.6);
-  padding:3px 8px;font-weight:400;letter-spacing:.3px;}
-thead tr.grp th.g-id   {background:#1A237E;color:#fff;}
-thead tr.grp th.g-cfg  {background:#4A148C;color:#fff;}
-thead tr.grp th.g-sales{background:#1B5E20;color:#fff;}
-thead tr.grp th.g-fba  {background:#0D47A1;color:#fff;}
-thead tr.grp th.g-awd  {background:#BF360C;color:#fff;}
-thead tr.grp th.g-cov  {background:#1565C0;color:#fff;}
-thead tr.grp th.g-sz   {background:#558B2F;color:#fff;}
-thead tr.grp th.g-rep  {background:#4E342E;color:#fff;}
-thead tr.grp th.g-alert{background:#B71C1C;color:#fff;}
+thead tr.grp th{background:#162030;font-size:9px;color:rgba(255,255,255,.5);
+  padding:3px 8px;font-weight:400;letter-spacing:.4px;}
+thead tr.grp th.g-id   {background:#1A237E;color:rgba(255,255,255,.9);}
+thead tr.grp th.g-cfg  {background:#311B92;color:rgba(255,255,255,.9);}
+thead tr.grp th.g-sales{background:#1B5E20;color:rgba(255,255,255,.9);}
+thead tr.grp th.g-fba  {background:#0D47A1;color:rgba(255,255,255,.9);}
+thead tr.grp th.g-awd  {background:#BF360C;color:rgba(255,255,255,.9);}
+thead tr.grp th.g-cov  {background:#004D40;color:rgba(255,255,255,.9);}
+thead tr.grp th.g-sz   {background:#33691E;color:rgba(255,255,255,.9);}
+thead tr.grp th.g-reo  {background:#7B1FA2;color:rgba(255,255,255,.9);}
+thead tr.grp th.g-rep  {background:#3E2723;color:rgba(255,255,255,.9);}
+thead tr.grp th.g-alert{background:#B71C1C;color:rgba(255,255,255,.9);}
 
-tbody tr:hover{background:#f5f7fa;}
-tbody td{padding:5px 8px;border-bottom:1px solid var(--border);
-  text-align:center;white-space:nowrap;}
+tbody tr:nth-child(even){background:#FAFAFA;}
+tbody tr:hover{background:#EEF5FB !important;cursor:pointer;}
+tbody tr.t-selected{background:#D6E8F7 !important;}
+tbody tr.t-selected td{color:var(--primary);font-weight:600;}
+tbody td{
+  padding:6px 10px;border-bottom:1px solid #EEEEEE;
+  text-align:center;white-space:nowrap;
+}
 tbody td.left{text-align:left;max-width:220px;overflow:hidden;text-overflow:ellipsis;}
 tbody td.name-cell{text-align:left;min-width:180px;max-width:320px;white-space:normal;word-break:break-word;line-height:1.4;}
 tbody td.sku{font-weight:700;font-size:11px;text-align:left;}
@@ -105,12 +174,17 @@ tbody td.num{font-variant-numeric:tabular-nums;}
 
 /* badges */
 .badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;}
+.b-rocket{background:linear-gradient(90deg,#FFECB3,#FFD54F);color:#BF360C;font-weight:700;box-shadow:0 1px 3px rgba(255,152,0,.3);}
 .b-hero  {background:#E8EAF6;color:#3949AB;}
 .b-norm  {background:#F3E5F5;color:#7B1FA2;}
 .b-air   {background:var(--red-bg);color:var(--red);}
 .b-red   {background:var(--red-bg);color:var(--red);}
 .b-yellow{background:var(--orange-bg);color:var(--orange);}
 .b-green {background:var(--green-bg);color:var(--green);}
+.b-blue  {background:#E3F2FD;color:#1565C0;}
+.b-orange-strong {background:#FFE0B2;color:#E65100;font-weight:700;}
+.b-multi {background:#FFF3E0;color:#E65100;cursor:help;}
+.b-disc  {background:#ECEFF1;color:#546E7A;text-decoration:line-through;}
 
 /* coverage colours */
 .cov-danger{color:var(--red);font-weight:700;}
@@ -141,31 +215,48 @@ tbody td.num{font-variant-numeric:tabular-nums;}
 .modal-footer{margin-top:16px;display:flex;gap:8px;justify-content:flex-end;}
 
 /* ── Tabs ───────────────────────────────────────────────────────────────── */
-.tab-nav{background:#fff;border-bottom:2px solid var(--border);display:flex;padding:0 16px;gap:2px;}
-.tab-btn{padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
-  color:var(--text2);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;
-  transition:color .15s;}
+.tab-nav{
+  background:#fff;border-bottom:1px solid var(--border);
+  display:flex;padding:0 20px;gap:0;
+  box-shadow:0 1px 0 rgba(0,0,0,.04);
+}
+.tab-btn{
+  padding:11px 22px;border:none;background:none;font-size:12px;font-weight:600;
+  color:var(--text3);cursor:pointer;
+  border-bottom:3px solid transparent;margin-bottom:-1px;
+  transition:all .15s;letter-spacing:.02em;
+}
 .tab-btn.active{color:var(--primary);border-bottom-color:var(--primary);}
-.tab-btn:hover:not(.active){color:var(--text);background:#f5f7fa;}
+.tab-btn:hover:not(.active){color:var(--text);background:#F8F8F8;}
 .tab-content{display:none;}
 .tab-content.active{display:block;}
 
 /* ── Traffic charts ─────────────────────────────────────────────────────── */
-.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
-.chart-card{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:14px;}
-.chart-card h4{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;}
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.chart-card{
+  background:var(--card);border:1px solid var(--border);border-radius:6px;
+  padding:16px;box-shadow:var(--shadow-sm);
+}
+.chart-card h4{
+  font-size:11px;font-weight:700;color:var(--text2);margin-bottom:12px;
+  text-transform:uppercase;letter-spacing:.06em;
+}
 .chart-card.full{grid-column:1/-1;}
 .chart-canvas{position:relative;height:240px;}
 
 /* ── MoM cards ──────────────────────────────────────────────────────────── */
-.mom-grid{display:grid;grid-template-columns:1fr 1fr 2fr;gap:12px;margin-bottom:12px;}
-.mom-card{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:14px;}
-.mom-card h4{font-size:11px;font-weight:700;margin-bottom:8px;color:var(--text2);}
+.mom-grid{display:grid;grid-template-columns:1fr 1fr 2fr;gap:12px;margin-bottom:14px;}
+.mom-card{
+  background:var(--card);border:1px solid var(--border);border-radius:6px;
+  padding:14px;box-shadow:var(--shadow-sm);
+}
+.mom-card h4{font-size:10px;font-weight:700;margin-bottom:10px;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.06em;}
 .mom-row{display:flex;justify-content:space-between;padding:5px 0;
-  border-bottom:1px solid var(--border);font-size:11px;}
+  border-bottom:1px solid #F0F0F0;font-size:11px;}
 .mom-row:last-child{border-bottom:none;}
 .mom-lbl{color:var(--text2);}
-.mom-val{font-weight:600;font-variant-numeric:tabular-nums;}
+.mom-val{font-weight:700;font-variant-numeric:tabular-nums;}
 .delta-up{color:var(--green);}
 .delta-dn{color:var(--red);}
 
@@ -182,8 +273,38 @@ input[type=month]{border:1px solid var(--border);border-radius:5px;padding:5px 8
   font-size:11px;background:#fafafa;cursor:pointer;outline:none;color:var(--text);}
 input[type=month]:focus{border-color:var(--primary);background:#fff;}
 .filter-divider{width:1px;height:20px;background:var(--border);margin:0 4px;}
+
+/* ── Multi-select slicer ─────────────────────────────────────────────────── */
+.multisel-wrap{position:relative;}
+.multisel-btn{display:flex;align-items:center;gap:6px;padding:5px 10px;
+  border:1px solid var(--border);border-radius:5px;background:#fafafa;
+  font-size:11px;cursor:pointer;white-space:nowrap;color:var(--text);
+  transition:border-color .15s;}
+.multisel-btn:hover{border-color:var(--primary);}
+.multisel-btn.has-sel{border-color:var(--primary);background:#E3F2FD;color:var(--primary);font-weight:600;}
+.multisel-badge{background:var(--primary);color:#fff;border-radius:10px;
+  padding:1px 6px;font-size:10px;font-weight:700;}
+.multisel-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;
+  z-index:500;background:#fff;border:1px solid var(--border);border-radius:8px;
+  box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:220px;max-height:320px;
+  overflow:hidden;flex-direction:column;}
+.multisel-panel.open{display:flex;}
+.multisel-search{padding:8px 10px;border-bottom:1px solid var(--border);}
+.multisel-search input{width:100%;border:1px solid var(--border);border-radius:5px;
+  padding:4px 8px;font-size:11px;outline:none;}
+.multisel-actions{display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);}
+.multisel-actions button{font-size:10px;padding:2px 8px;border-radius:4px;
+  border:1px solid var(--border);background:#f5f5f5;cursor:pointer;color:var(--text2);}
+.multisel-actions button:hover{background:#e3f2fd;color:var(--primary);}
+.multisel-list{overflow-y:auto;flex:1;padding:4px 0;}
+.multisel-item{display:flex;align-items:center;gap:8px;padding:5px 12px;
+  cursor:pointer;font-size:11px;transition:background .1s;}
+.multisel-item:hover{background:#f5f7fa;}
+.multisel-item input[type=checkbox]{accent-color:var(--primary);cursor:pointer;}
+.multisel-item label{cursor:pointer;flex:1;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 </head>
 <body>
 
@@ -220,7 +341,7 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <div class="sub">Coverage &lt; 2.33M</div>
     </div>
     <div class="card c-orange">
-      <div class="lbl">🔴 超過 3M Cap</div>
+      <div class="lbl">🔴 超過 5M Cap</div>
       <div class="val" id="k-cap" style="color:var(--orange)">—</div>
       <div class="sub">FBA+AWD &gt; 3 個月</div>
     </div>
@@ -262,21 +383,24 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
 
     <!-- SZ Warehouse -->
     <div class="upload-card">
-      <div class="title">🏪 深圳倉（SZ Warehouse）</div>
-      <div class="hint">欄位: 商品编码（= Amazon SKU）、可出库数量</div>
+      <div class="title">🏪 深圳倉庫（美國倉 + 佳樂倉 + Unit/Case）</div>
+      <div class="hint">欄位: SKU / 美國倉庫存 / 佳樂倉庫存 / Unit/Case</div>
       <div class="upload-row-inner">
+        <button class="btn btn-sm" style="background:#5C6BC0;color:#fff" onclick="downloadSzTemplate()">⬇️ 下載 Template</button>
         <input type="file" id="sz-file" accept=".xlsx,.xls,.csv" style="font-size:10px;flex:1">
-        <button class="btn btn-green btn-sm" onclick="uploadFile('sz')">上傳</button>
+        <button class="btn btn-green btn-sm" onclick="uploadFile('sz')">⬆️ 上傳</button>
         <span class="status-msg" id="sz-status"></span>
       </div>
+      <div id="sz-stale-warn" style="display:none;margin-top:6px;padding:6px 10px;background:#FFF3E0;border-left:3px solid #E65100;color:#BF360C;font-size:11px;border-radius:4px"></div>
     </div>
 
     <!-- AWD Sync -->
     <div class="upload-card">
       <div class="title">🏭 AWD Inventory（自動同步）</div>
-      <div class="hint">直接從 Amazon SP-API 抓取，無需下載檔案</div>
+      <div class="hint">list_inventory 每小時，Report 每天覆蓋（權威）</div>
       <div class="upload-row-inner">
-        <button class="btn btn-orange btn-sm" id="awd-btn" onclick="syncAwd()">🔄 立即同步 AWD</button>
+        <button class="btn btn-orange btn-sm" id="awd-btn" onclick="syncAwd()">🔄 快速同步 (API)</button>
+        <button class="btn btn-sm" style="background:#7B1FA2;color:#fff" onclick="syncAwdReport()">📊 Report 同步 (權威)</button>
         <span class="status-msg" id="awd-status"></span>
       </div>
       <div style="margin-top:4px;font-size:10px;color:var(--text3)">
@@ -285,17 +409,84 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       </div>
     </div>
 
+    <!-- FBA CSV upload -->
+    <div class="upload-card">
+      <div class="title">📦 FBA Inventory（權威 CSV 上傳）</div>
+      <div class="hint">Amazon Seller Central → Manage FBA Inventory → 匯出 CSV 直接上傳</div>
+      <div class="upload-row-inner" style="flex-wrap:wrap;gap:6px">
+        <label style="font-size:11px;color:#c62828;font-weight:600">上傳到：</label>
+        <select id="fba-upload-marketplace" style="font-size:11px;padding:2px 4px;border:2px solid #c62828;border-radius:4px;background:#fff5f5">
+          <option value="ATVPDKIKX0DER">🇺🇸 US</option>
+          <option value="A1F83G8C2ARO7P">🇬🇧 UK</option>
+          <option value="A1PA6795UKMFR9">🇩🇪 DE</option>
+        </select>
+        <input type="file" id="fba-file" accept=".xlsx,.xls,.csv" style="font-size:10px;flex:1;min-width:120px">
+        <button class="btn btn-sm" style="background:#0D47A1;color:#fff" onclick="uploadFile('fba')">⬆️ 上傳</button>
+        <span class="status-msg" id="fba-status"></span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       同步健康度 + 資料異常
+       ═══════════════════════════════════════════════════════════════ -->
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:10px">
+
+    <!-- 健康度 -->
+    <div class="upload-card">
+      <div class="title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>🩺 資料串接健康度</span>
+        <button class="btn btn-sm" style="background:#eee;font-size:10px" onclick="loadHealthPanels()">🔄 重整</button>
+      </div>
+      <table id="health-tbl" style="width:100%;font-size:10.5px;margin-top:4px;border-collapse:collapse">
+        <thead style="background:#F5F7FA;color:#37474F">
+          <tr>
+            <th style="padding:4px 6px;text-align:left">資料源</th>
+            <th style="padding:4px 6px">最後同步</th>
+            <th style="padding:4px 6px">SKU 總數</th>
+            <th style="padding:4px 6px">有庫存</th>
+            <th style="padding:4px 6px">覆蓋率</th>
+            <th style="padding:4px 6px">24h 異常</th>
+            <th style="padding:4px 6px">狀態</th>
+          </tr>
+        </thead>
+        <tbody id="health-body">
+          <tr><td colspan="7" style="text-align:center;color:#999;padding:8px">載入中…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 異常清單 -->
+    <div class="upload-card">
+      <div class="title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>⚠️ 資料異常 (24h)</span>
+        <span id="anom-count" style="font-size:11px;color:#E65100;font-weight:700">—</span>
+      </div>
+      <div id="anom-list" style="max-height:180px;overflow:auto;font-size:10.5px;margin-top:4px">
+        <div style="color:#999;text-align:center;padding:8px">載入中…</div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Toolbar -->
   <div class="toolbar">
+    <label>站點</label>
+    <select id="f-marketplace" onchange="loadData(); loadHealthPanels();">
+      <option value="ATVPDKIKX0DER">🇺🇸 US</option>
+      <option value="A1F83G8C2ARO7P">🇬🇧 UK</option>
+      <option value="A1PA6795UKMFR9">🇩🇪 DE</option>
+    </select>
     <label>搜尋</label>
     <input type="text" id="q" placeholder="SKU / ASIN / Collection / 品名" style="width:220px" oninput="render()">
     <label>類型</label>
     <select id="f-type" onchange="render()">
       <option value="">全部</option>
+      <option value="Rocket">🚀 Rocket</option>
       <option value="流量款">流量款</option>
       <option value="一般款">一般款</option>
+      <option value="Discontinued">Discontinued</option>
     </select>
     <label>警示</label>
     <select id="f-alert" onchange="render()">
@@ -321,16 +512,16 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
           <th colspan="1" class="g-sales">銷售</th>
           <th colspan="4" class="g-fba">FBA</th>
           <th colspan="5" class="g-awd">AWD</th>
-          <th colspan="1" class="g-cov">Coverage</th>
-          <th colspan="4" class="g-sz">深圳倉 / 設定</th>
-          <th colspan="5" class="g-rep">補貨計算</th>
-          <th colspan="2" class="g-alert">警示</th>
+          <th colspan="2" class="g-cov">Coverage</th>
+          <th colspan="12" class="g-sz">深圳倉庫（美國倉 + 欠數 + 佳樂倉）</th>
+          <th colspan="5" class="g-reo">返單計畫</th>
+          <th colspan="4" class="g-rep">AWD Replenishment</th>
         </tr>
         <!-- Column header row -->
         <tr id="hdr"></tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="29" class="empty"><div class="spinner"></div> 載入中...</td></tr>
+        <tr><td colspan="40" class="empty"><div class="spinner"></div> 載入中...</td></tr>
       </tbody>
     </table>
   </div>
@@ -341,17 +532,8 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
 <div id="tab-traffic" class="tab-content">
 <div class="page">
 
-  <!-- KPI strip -->
-  <div class="t-cards cards" id="t-kpis">
-    <div class="card c-blue"><div class="lbl">Sessions</div><div class="val">—</div><div class="sub">載入中…</div></div>
-    <div class="card c-green"><div class="lbl">整體 CVR%</div><div class="val">—</div><div class="sub">Units ÷ Sessions</div></div>
-    <div class="card c-orange"><div class="lbl">Units Ordered</div><div class="val">—</div><div class="sub">期間合計</div></div>
-    <div class="card c-blue"><div class="lbl">Revenue</div><div class="val">—</div><div class="sub">期間合計</div></div>
-  </div>
-
-  <!-- Filter bar -->
-  <div class="toolbar" style="flex-wrap:wrap;gap:8px 12px;align-items:center;">
-    <!-- Presets -->
+  <!-- ① Filter bar + KPI strip -->
+  <div class="toolbar" style="flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:8px;">
     <div class="preset-group">
       <button class="preset-btn" onclick="setPreset(3,this)">3M</button>
       <button class="preset-btn" onclick="setPreset(6,this)">6M</button>
@@ -359,7 +541,6 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <button class="preset-btn" onclick="setPreset(0,this)">全部</button>
     </div>
     <div class="filter-divider"></div>
-    <!-- Custom date range -->
     <div class="date-range">
       <span style="font-size:13px">📅</span>
       <input type="month" id="t-from" onchange="clearPreset();applyTrafficFilter()">
@@ -367,86 +548,174 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <input type="month" id="t-to" onchange="clearPreset();applyTrafficFilter()">
     </div>
     <div class="filter-divider"></div>
-    <!-- Collection -->
-    <label style="font-size:11px;color:var(--text2)">Collection</label>
-    <select id="t-coll" onchange="applyTrafficFilter()"><option value="">全部</option></select>
+    <!-- Multi-select Collection slicer -->
+    <div class="multisel-wrap" id="t-coll-wrap">
+      <div class="multisel-btn" id="t-coll-btn" onclick="toggleCollPanel(event)">
+        <span>Collection</span>
+        <span id="t-coll-badge" class="multisel-badge" style="display:none">0</span>
+        <span style="font-size:9px;color:var(--text3)">▼</span>
+      </div>
+      <div class="multisel-panel" id="t-coll-panel">
+        <div class="multisel-search">
+          <input type="text" id="t-coll-search" placeholder="搜尋 collection…" oninput="filterCollPanel()">
+        </div>
+        <div class="multisel-actions">
+          <button onclick="selectAllColls()">全選</button>
+          <button onclick="clearAllColls()">清除</button>
+        </div>
+        <div class="multisel-list" id="t-coll-list"></div>
+      </div>
+    </div>
     <div class="spacer"></div>
+    <!-- Active cross-filter badge -->
+    <div id="t-cf-badge" style="display:none;align-items:center;gap:6px;
+      background:#E3F2FD;border:1px solid var(--primary);border-radius:20px;
+      padding:3px 10px;font-size:11px;font-weight:600;color:var(--primary)">
+      <span id="t-cf-label"></span>
+      <span onclick="clearCrossFilter()" style="cursor:pointer;font-size:13px;opacity:.7">✕</span>
+    </div>
     <button class="btn btn-outline btn-sm" onclick="loadTraffic()">🔄 重新整理</button>
   </div>
 
-  <!-- Pie charts row 1: Revenue + Units by Collection -->
+  <!-- KPI Cards -->
+  <div class="t-cards cards" id="t-kpis" style="margin-bottom:12px">
+    <div class="card c-blue"><div class="lbl">Sessions</div><div class="val">—</div><div class="sub">載入中…</div></div>
+    <div class="card c-green"><div class="lbl">AVG CVR%</div><div class="val">—</div><div class="sub">Units ÷ Sessions</div></div>
+    <div class="card c-orange"><div class="lbl">Units Sold</div><div class="val">—</div><div class="sub">期間合計</div></div>
+    <div class="card c-blue"><div class="lbl">Total Sales</div><div class="val">—</div><div class="sub">期間合計</div></div>
+    <div class="card c-green"><div class="lbl">AVG MSRP</div><div class="val">—</div><div class="sub">Sales ÷ Units</div></div>
+  </div>
+
+  <!-- ★ A: Monthly Revenue & Profit P&L -->
+  <div class="chart-card full" style="margin-bottom:14px">
+    <h4>📈 月度 Revenue & Profit 趨勢</h4>
+    <div class="chart-canvas" style="height:280px"><canvas id="c-monthly-pl"></canvas></div>
+  </div>
+
+  <!-- ★ B: MoM Growth Strip -->
+  <div class="chart-card full" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+      <h4 style="margin:0">📊 MoM 成長率</h4>
+      <select id="mom-month-sel" onchange="renderMoMStrip()"
+        style="font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--border)">
+      </select>
+      <span style="font-size:10px;color:var(--text3)">vs 上個月</span>
+    </div>
+    <div id="mom-strip" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px"></div>
+  </div>
+
+  <!-- ② Revenue Rankings: by Collection + by Name -->
   <div class="chart-row">
     <div class="chart-card">
-      <h4>💰 Revenue by Collection</h4>
-      <div class="chart-canvas"><canvas id="c-rev-coll"></canvas></div>
+      <h4>💰 Revenue by Collection <span style="font-size:10px;color:var(--text3);font-weight:400">點擊篩選</span></h4>
+      <div class="chart-canvas" style="height:260px"><canvas id="c-rev-coll"></canvas></div>
     </div>
     <div class="chart-card">
-      <h4>📦 Units by Collection</h4>
-      <div class="chart-canvas"><canvas id="c-units-coll"></canvas></div>
+      <h4>💰 Revenue by Name（Top 15）<span style="font-size:10px;color:var(--text3);font-weight:400">點擊篩選</span></h4>
+      <div class="chart-canvas" style="height:260px"><canvas id="c-rev-name"></canvas></div>
     </div>
   </div>
 
-  <!-- Pie charts row 2: Revenue + Units by SKU top 10 -->
+  <!-- ③ Units Rankings: by Collection + by Name -->
   <div class="chart-row">
     <div class="chart-card">
-      <h4>💰 Revenue by SKU（Top 10）</h4>
-      <div class="chart-canvas"><canvas id="c-rev-sku"></canvas></div>
+      <h4>📦 Units Sold by Collection <span style="font-size:10px;color:var(--text3);font-weight:400">點擊篩選</span></h4>
+      <div class="chart-canvas" style="height:260px"><canvas id="c-units-coll"></canvas></div>
     </div>
     <div class="chart-card">
-      <h4>📦 Units by SKU（Top 10）</h4>
-      <div class="chart-canvas"><canvas id="c-units-sku"></canvas></div>
+      <h4>📦 Units Sold by Name（Top 15）<span style="font-size:10px;color:var(--text3);font-weight:400">點擊篩選</span></h4>
+      <div class="chart-canvas" style="height:260px"><canvas id="c-units-name"></canvas></div>
     </div>
   </div>
 
-  <!-- Line charts row: Sessions + CVR / Sessions + Units -->
-  <div class="chart-row">
-    <div class="chart-card">
-      <h4>📈 Monthly Sessions vs CVR%</h4>
-      <div class="chart-canvas"><canvas id="c-sessions-cvr"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <h4>📊 Monthly Sessions vs Units Ordered</h4>
-      <div class="chart-canvas"><canvas id="c-sessions-units"></canvas></div>
+  <!-- ④ Sessions + CVR% — 上下分拆兩個 panel，CVR 獨立 Y 軸 -->
+  <div class="chart-card full" style="margin-bottom:12px">
+    <h4>📈 Sessions &amp; CVR% 月趨勢</h4>
+    <div style="display:grid;grid-template-rows:140px 120px;gap:0">
+      <div style="position:relative"><canvas id="c-sessions-bar"></canvas></div>
+      <div style="position:relative"><canvas id="c-cvr-line"></canvas></div>
     </div>
   </div>
 
-  <!-- MoM Comparison -->
+  <!-- ⑤ Sessions vs Units -->
+  <div class="chart-card full" style="margin-bottom:12px">
+    <h4>📊 Sessions vs Units Sold 月趨勢</h4>
+    <div class="chart-canvas"><canvas id="c-sessions-units"></canvas></div>
+  </div>
+
+  <!-- ⑦ Sessions by Collection (horizontal bar) -->
   <div class="chart-card" style="margin-bottom:12px">
-    <h4>📅 Month-over-Month 比較（最後兩個月）</h4>
-    <div id="t-mom" class="mom-grid" style="margin-top:8px"></div>
+    <h4>🔍 Sessions by Collection <span style="font-size:10px;color:var(--text3);font-weight:400">點擊篩選</span></h4>
+    <div class="chart-canvas" style="height:280px"><canvas id="c-sessions-coll"></canvas></div>
   </div>
 
-  <!-- Detail Table -->
-  <div class="toolbar">
+  <!-- ⑧ ROI / Profit Analysis -->
+  <div class="chart-card" style="margin-bottom:12px">
+    <h4>💹 扣除廣告前產品投報率（Sales - COG × Units = 利潤）</h4>
+    <div class="chart-canvas" style="height:260px"><canvas id="c-roi-coll"></canvas></div>
+  </div>
+
+  <!-- ⑥ Detail Table -->
+  <div class="toolbar" style="margin-top:4px">
     <label>月份</label>
-    <select id="t-month-sel" onchange="renderTrafficTable()">
-      <option value="">全部</option>
-    </select>
+    <select id="t-month-sel" onchange="renderTrafficTable()"><option value="">全部</option></select>
     <label>搜尋</label>
-    <input type="text" id="t-search" placeholder="SKU / Collection / 品名"
+    <input type="text" id="t-search" placeholder="Name / ASIN / SKU / Collection"
       style="width:200px" oninput="renderTrafficTable()">
     <div class="spacer"></div>
     <span id="t-row-count" style="color:var(--text3);font-size:11px"></span>
   </div>
-  <div class="tbl-wrap" style="max-height:380px">
+  <div class="tbl-wrap" style="max-height:420px">
     <table id="t-tbl">
       <thead>
-        <tr style="background:#37474F">
-          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">月份</th>
-          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">SKU</th>
-          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">Collection</th>
-          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px;text-align:left">品名</th>
-          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">Sessions</th>
-          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">Page Views</th>
-          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">CVR%</th>
-          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">Units</th>
-          <th style="background:#37474F;color:#fff;padding:7px 8px;white-space:nowrap;font-size:10px">Revenue ($)</th>
-        </tr>
+        <tr id="t-tbl-hdr"></tr>
       </thead>
       <tbody id="t-tbody">
-        <tr><td colspan="9" class="empty">切換到「流量分析」標籤自動載入</td></tr>
+        <tr><td colspan="14" class="empty">切換到「流量分析」標籤自動載入</td></tr>
       </tbody>
     </table>
+  </div>
+
+  <!-- 📊 SKU Growth Analysis -->
+  <div class="chart-card full" style="margin-top:14px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap">
+      <h4 style="margin:0">📊 SKU 成長衰退分析</h4>
+      <label style="font-size:11px;color:var(--text2);font-weight:500">比較期間</label>
+      <select id="g-period" onchange="renderGrowthAnalysis()"
+        style="font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--border)">
+        <option value="1">MoM（上月 vs 前月）</option>
+        <option value="3" selected>3M vs 3M（近 3 個月對比前 3 個月）</option>
+        <option value="6">6M vs 6M</option>
+        <option value="12">12M vs 12M</option>
+      </select>
+      <span id="g-period-label" style="font-size:10px;color:var(--text3)"></span>
+      <div class="spacer"></div>
+      <span id="g-row-count" style="font-size:11px;color:var(--text3)"></span>
+    </div>
+
+    <!-- Quadrant chart + legend cards -->
+    <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:14px;align-items:start">
+      <div>
+        <div style="text-align:center;font-size:10px;color:var(--text3);margin-bottom:6px">
+          X = Sessions 變化% ｜ Y = CVR 變化% ｜ 氣泡大小 = 銷售金額
+        </div>
+        <div style="position:relative;height:320px"><canvas id="c-quadrant"></canvas></div>
+      </div>
+      <div id="g-legend" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start"></div>
+    </div>
+
+    <!-- Growth table -->
+    <div class="tbl-wrap" style="max-height:380px">
+      <table>
+        <thead>
+          <tr id="g-tbl-hdr"></tr>
+          <tr id="g-tbl-filter"></tr>
+        </thead>
+        <tbody id="g-tbody">
+          <tr><td colspan="10" class="empty">載入中…</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
 </div>
@@ -477,6 +746,9 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <div style="color:var(--text2)">AWD 目標月數 — <span style="color:#1976D2;font-weight:700">流量款</span></div>
       <input type="number" id="c-awd_target_hero" min="0.1" step="0.1" style="text-align:center">
 
+      <div style="color:var(--text2)">AWD 目標月數 — <span style="color:#BF360C;font-weight:700">🚀 Rocket</span></div>
+      <input type="number" id="c-awd_target_rocket" min="0.1" step="0.1" style="text-align:center">
+
       <div style="border-top:1px solid var(--border);grid-column:1/-1;margin:2px 0"></div>
 
       <div style="color:var(--text2)">FBA + AWD 總上限月數（Cap）</div>
@@ -489,6 +761,33 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
 
       <div style="color:var(--text2)">SZ 返單水位 — <span style="color:#1976D2;font-weight:700">流量款</span></div>
       <input type="number" id="c-sz_level_hero" min="0.1" step="0.1" style="text-align:center">
+
+      <div style="color:var(--text2)">SZ 返單水位 — <span style="color:#BF360C;font-weight:700">🚀 Rocket</span></div>
+      <input type="number" id="c-sz_level_rocket" min="0.1" step="0.1" style="text-align:center">
+
+      <div style="border-top:1px solid var(--border);grid-column:1/-1;margin:2px 0"></div>
+
+      <div style="color:var(--text2)">SZ 移倉水位 — <span style="color:#3949AB;font-weight:700">一般款</span>
+        <br><span style="font-size:9px;color:var(--text3)">美國倉應保持的月數</span></div>
+      <input type="number" id="c-sz_transfer_level_normal" min="0.1" step="0.1" style="text-align:center">
+
+      <div style="color:var(--text2)">SZ 移倉水位 — <span style="color:#1976D2;font-weight:700">流量款</span>
+        <br><span style="font-size:9px;color:var(--text3)">佳樂 → 美國 移倉計算依據</span></div>
+      <input type="number" id="c-sz_transfer_level_hero" min="0.1" step="0.1" style="text-align:center">
+
+      <div style="color:var(--text2)">SZ 移倉水位 — <span style="color:#BF360C;font-weight:700">🚀 Rocket</span>
+        <br><span style="font-size:9px;color:var(--text3)">最高優先，備貨量最大</span></div>
+      <input type="number" id="c-sz_transfer_level_rocket" min="0.1" step="0.1" style="text-align:center">
+
+      <div style="border-top:1px solid var(--border);grid-column:1/-1;margin:2px 0"></div>
+
+      <div style="color:var(--text2)">移倉觸發門檻（Total Coverage）
+        <br><span style="font-size:9px;color:var(--text3)">當 FBA+AWD Coverage 高於此值就不建議移倉</span></div>
+      <input type="number" id="c-transfer_trigger_coverage" min="0.5" step="0.5" style="text-align:center">
+
+      <div style="color:var(--text2)">返單觸發門檻（Total Coverage）
+        <br><span style="font-size:9px;color:var(--text3)">工廠 lead time 45 天，建議設較保守</span></div>
+      <input type="number" id="c-reorder_trigger_coverage" min="0.5" step="0.5" style="text-align:center">
     </div>
     <div style="margin-top:10px;padding:8px 10px;background:#f5f5f5;border-radius:6px;font-size:10px;color:var(--text3)">
       💡 空運觸發閾值 = (生產天數 + 海運天數) ÷ 30 個月（目前顯示在下方）<br>
@@ -529,10 +828,10 @@ let cfgData = [];
 // ── Column definitions (matching Excel A-AB order) ──────────────────────────
 const COLS = [
   // key, header, width, align, render fn name
-  {k:'collection',       h:'Collection',             w:100, a:'left'},
+  {k:'collection',       h:'Collection',             w:75,  a:'left'},
   {k:'parent_asin',      h:'Parent ASIN',             w:110, a:'left'},
   {k:'asin',             h:'ASIN',                    w:110, a:'left'},
-  {k:'sku',              h:'SKU',                     w:130, a:'left', bold:true},
+  {k:'sku',              h:'SKU',                     w:115, a:'left', r:'skuCell'},
   {k:'product_name',     h:'Name',                    w:220, a:'left', name:true},
   {k:'product_type',     h:'産品類型',                 w:72,  a:'center', r:'typeTag'},
   {k:'awd_target_months',h:'AWD目標月',               w:58,  a:'center', fmt:1},
@@ -540,24 +839,38 @@ const COLS = [
   {k:'fba_available',    h:'FBA Available\n(現貨)',     w:65,  a:'center', fmt:0},
   {k:'fba_inbound',      h:'FBA Inbound\n(在途)',      w:65,  a:'center', fmt:0},
   {k:'fba_total',        h:'FBA Total\n(現貨+在途)',   w:65,  a:'center', fmt:0},
-  {k:'fba_month',        h:'FBA Total\nMonth',         w:58,  a:'center', fmt:2},
+  {k:'fba_month',        h:'FBA Total\nMonth',         w:58,  a:'center', r:'fbaMonthCell'},
   {k:'awd_available',    h:'AWD\nAvailable',           w:65,  a:'center', fmt:0},
   {k:'awd_inbound',      h:'AWD\nInbound',             w:60,  a:'center', fmt:0},
   {k:'awd_outbound',     h:'AWD\nOutbound',            w:60,  a:'center', fmt:0},
   {k:'awd_total',        h:'AWD Total\n(Avail+In-Out)',w:65,  a:'center', fmt:0},
-  {k:'awd_month',        h:'AWD Month',                w:58,  a:'center', fmt:2},
+  {k:'awd_month',        h:'AWD Month',                w:58,  a:'center', r:'awdMonthCell'},
   {k:'total_coverage',   h:'Total Coverage\nFBA+AWD(M)',w:70, a:'center', r:'covCell'},
-  {k:'sz_shippable',     h:'SZ現有庫存',               w:65,  a:'center', fmt:0},
-  {k:'sz_reorder_level', h:'返單水位',                  w:58,  a:'center', fmt:1},
-  {k:'eta',              h:'ETA',                      w:70,  a:'center'},
-  {k:'unit_per_case',    h:'Unit/Case',                w:55,  a:'center', fmt:0},
-  {k:'total_pipeline',   h:'Total Pipeline (M)',        w:70,  a:'center', fmt:2},
-  {k:'immediate_coverage',h:'Immediate\nCoverage',     w:65,  a:'center', fmt:2},
-  {k:'awd_replen_qty',   h:'AWD 需補量',               w:65,  a:'center', r:'replenCell'},
-  {k:'sz_available_qty', h:'SZ 可出量',                w:60,  a:'center', fmt:0},
-  {k:'sea_shipment_qty', h:'建議海運量\n（箱整）',       w:70,  a:'center', r:'seaCell'},
-  {k:'air_alert',        h:'🚨 空運警示',              w:80,  a:'center', r:'airTag'},
-  {k:'cap_alert',        h:'3M Cap 警示',              w:78,  a:'center', r:'capTag'},
+  {k:'cap_alert',        h:'5M Cap 警示',              w:78,  a:'center', r:'capTag'},
+  // ── 深圳倉庫（新版：美國倉 + 欠數 + 佳樂倉）─────────────────────────
+  {k:'safety_stock',     h:'安全庫存\n門檻',            w:65,  a:'center', r:'safetyCell'},
+  {k:'us_qty',           h:'美國倉',                   w:65,  a:'center', fmt:0},
+  {k:'jl_qty',           h:'佳樂倉',                   w:65,  a:'center', fmt:0},
+  {k:'pending_qty',      h:'欠數\n(已下單)',            w:65,  a:'center', r:'pendingCell'},
+  {k:'order_date',       h:'下單日期',                  w:78,  a:'center', r:'orderDateOnlyCell'},
+  {k:'expected_date',    h:'約定交期',                w:110, a:'center', r:'expectedDateCell'},
+  {k:'factory_confirmed_date', h:'工廠回覆交期',       w:130, a:'center', r:'factoryConfirmedCell'},
+  {k:'unit_per_case',    h:'Unit/Case',                w:58,  a:'center', fmt:0},
+  {k:'us_month',         h:'美國倉\nMonth',            w:60,  a:'center', r:'usMonthCell'},
+  {k:'us_virtual_month', h:'美國虛擬\nMonth',           w:65,  a:'center', r:'usVirtualMonthCell'},
+  {k:'sz_total_month',   h:'深圳倉庫總量\nMonth',       w:70,  a:'center', r:'szTotalMonthCell'},
+  {k:'transfer_qty',     h:'移倉數建議\n(佳樂→美國)',   w:78,  a:'center', r:'transferCell'},
+  // ── 返單計畫（v4 增強：5 欄）────────────────────────────────────────
+  {k:'reorder_alert',    h:'返單警示',                 w:88,  a:'center', r:'reorderAlertTag'},
+  {k:'reorder_qty',      h:'建議返單\n數量',            w:70,  a:'center', r:'reorderQtyCell'},
+  {k:'case_reorder_qty', h:'整箱返單\n數量',            w:88,  a:'center', r:'caseReorderCell'},
+  {k:'suggested_order_date', h:'建議\n下單日',          w:90,  a:'center', r:'orderDateCell'},
+  {k:'days_until_late',  h:'交期倒數\n(天)',            w:78,  a:'center', r:'leadTimeCell'},
+  // ── AWD Replenishment（整合原 補貨計畫 + 警示）─────────────────────
+  {k:'air_alert',        h:'🚨 空運警示',              w:88,  a:'center', r:'airTag'},
+  {k:'immediate_coverage',h:'Immediate\nCoverage',     w:70,  a:'center', r:'immedCovCell'},
+  {k:'awd_replen_qty',   h:'AWD 需補貨量',             w:130, a:'center', r:'replenCell'},
+  {k:'total_pipeline',   h:'Total Pipeline (M)',        w:80,  a:'center', r:'totalPipeCell'},
 ];
 
 // Build header row
@@ -585,9 +898,35 @@ const n = (v, dec) => {
 };
 
 const typeTag = r => {
+  if(r.product_type==='Rocket') return `<span class="badge b-rocket" title="最高備貨層級">🚀 Rocket</span>`;
   if(r.product_type==='流量款') return `<span class="badge b-hero">流量款</span>`;
   if(r.product_type==='一般款') return `<span class="badge b-norm">一般款</span>`;
+  if(r.product_type==='Discontinued') return `<span class="badge b-disc" title="已停產：現有庫存賣完為止">⏸️ Discontinued</span>`;
   return `<span style="color:var(--text3);font-size:10px">未設定</span>`;
+};
+
+const fbaMonthCell = r => {
+  const v = r.fba_month;
+  if(v === null || v === undefined) return '—';
+  const val = Number(v).toFixed(2);
+  if(v < 1.5) return `<span style="color:var(--red);font-weight:700">${val}</span>`;
+  return val;
+};
+
+// AWD Month（三級，依 awd_target 動態）
+//   v < awd_target × 0.5 → 🔴 紅（危險，只剩一半目標）
+//   v < awd_target       → 🟡 橘（低於目標）
+//   v ≥ awd_target       → 🟢 綠（達標）
+const awdMonthCell = r => {
+  const v = r.awd_month;
+  if(v === null || v === undefined) return '—';
+  const val = Number(v).toFixed(2);
+  const t = Number(r.awd_target_months || 1);
+  if(v < t * 0.5)
+    return `<span style="color:var(--red);font-weight:700" title="低於目標 ${t} 的 50%（危險）">${val}</span>`;
+  if(v < t)
+    return `<span style="color:var(--orange);font-weight:700" title="低於目標 ${t}（需注意）">${val}</span>`;
+  return `<span style="color:var(--green);font-weight:600" title="已達目標 ${t}">${val}</span>`;
 };
 
 const covCell = r => {
@@ -597,10 +936,18 @@ const covCell = r => {
   return `<span class="${cls}">${Number(v).toFixed(2)}</span>`;
 };
 
+// AWD 需補貨量 — 顯示 「原始 unit + (N 箱整箱量)」
 const replenCell = r => {
   const v = r.awd_replen_qty;
   if(v===null||v===undefined) return '—';
-  return v>0 ? `<span class="hi-blue">${Number(v).toLocaleString()}</span>` : n(v,0);
+  if(v <= 0) return '—';
+  const caseQty = r.awd_replen_case_qty || 0;
+  const caseCnt = r.awd_replen_case_cnt || 0;
+  if(caseQty && caseCnt){
+    return `<span class="hi-blue">${Number(v).toLocaleString()}</span> ` +
+           `<span style="color:var(--text3);font-size:9.5px">→ ${caseQty.toLocaleString()} (${caseCnt}箱)</span>`;
+  }
+  return `<span class="hi-blue">${Number(v).toLocaleString()}</span>`;
 };
 
 const seaCell = r => {
@@ -609,8 +956,37 @@ const seaCell = r => {
   return `<span class="hi-green">${Number(v).toLocaleString()}</span>`;
 };
 
-const airTag = r => r.air_alert
-  ? `<span class="badge b-air">${r.air_alert}</span>` : '';
+// 空運警示 — 分兩級 🔴 立即空運 / 🟠 評估空運
+const airTag = r => {
+  if(!r.air_alert) return '';
+  const t = r.air_alert;
+  const cls = t.includes('立即') ? 'b-red'
+            : t.includes('評估') ? 'b-orange-strong' : 'b-air';
+  return `<span class="badge ${cls}">${t}</span>`;
+};
+
+// Immediate Coverage — 分級 <1 紅 / <2 橘 / >=2 綠
+const immedCovCell = r => {
+  const v = r.immediate_coverage;
+  if(v===null||v===undefined) return '—';
+  const val = Number(v).toFixed(2);
+  if(v < 1)  return `<span style="color:var(--red);font-weight:700">${val}</span>`;
+  if(v < 2)  return `<span style="color:var(--orange);font-weight:700">${val}</span>`;
+  return `<span style="color:var(--green);font-weight:600">${val}</span>`;
+};
+
+// Total Pipeline — 分級（動態閾值來自 window._thresholds）
+const totalPipeCell = r => {
+  const v = r.total_pipeline;
+  if(v===null||v===undefined) return '—';
+  const val = Number(v).toFixed(2);
+  const air = (window._thresholds && window._thresholds.air_threshold) || 2.83;
+  const cap = (window._thresholds && window._thresholds.total_cap_months) || 5.0;
+  if(v < air) return `<span style="color:var(--red);font-weight:700" title="低於空運閾值 ${air}">${val}</span>`;
+  if(v < 3)   return `<span style="color:var(--orange);font-weight:700">${val}</span>`;
+  if(v <= cap) return `<span style="color:var(--green);font-weight:600">${val}</span>`;
+  return `<span style="color:var(--text3)" title="超過 Cap ${cap}">${val}</span>`;
+};
 
 const capTag = r => {
   if(!r.cap_alert) return '';
@@ -618,7 +994,177 @@ const capTag = r => {
   return `<span class="badge ${cls}">${r.cap_alert}</span>`;
 };
 
-const renderers = {typeTag,covCell,replenCell,seaCell,airTag,capTag};
+// 美國倉 Month — < 1 紅字
+const usMonthCell = r => {
+  const v = r.us_month;
+  if(v===null||v===undefined) return '—';
+  const val = Number(v).toFixed(2);
+  if(v < 1) return `<span style="color:var(--red);font-weight:700">${val}</span>`;
+  return val;
+};
+
+// 深圳倉庫總量 Month — < 1 紅字
+const szTotalMonthCell = r => {
+  const v = r.sz_total_month;
+  if(v===null||v===undefined) return '—';
+  const val = Number(v).toFixed(2);
+  if(v < 1) return `<span style="color:var(--red);font-weight:700">${val}</span>`;
+  return val;
+};
+
+// 移倉數建議 — > 0 用亮橘標記；被 Coverage 抑制時提示原因
+const transferCell = r => {
+  const v = r.transfer_qty;
+  if(v===null||v===undefined||v===0){
+    if(r.transfer_suppressed_by_coverage){
+      const trig = r.transfer_trigger_coverage || 4.0;
+      const cov  = (r.total_coverage != null) ? Number(r.total_coverage).toFixed(2) : '—';
+      return `<span style="color:#546E7A;cursor:help" title="因 Total Coverage=${cov} ≥ 門檻 ${trig}，不建議移倉（避免囤貨降低周轉）">💤</span>`;
+    }
+    return '—';
+  }
+  return `<span style="color:#E65100;font-weight:700">${Number(v).toLocaleString()}</span>`;
+};
+
+// 安全庫存門檻 — 淺灰底，代表門檻參考值
+const safetyCell = r => {
+  const v = r.safety_stock;
+  if(v===null||v===undefined) return '—';
+  if(v === 0) return `<span style="color:var(--text3)">0</span>`;
+  return `<span style="background:#ECEFF1;color:#37474F;padding:2px 6px;border-radius:4px;font-weight:600">${Number(v).toLocaleString()}</span>`;
+};
+
+// 建議返單數量 — > 0 用紅色；被 Coverage 抑制時顯示 💤
+const reorderQtyCell = r => {
+  const v = r.reorder_qty;
+  if(v===null||v===undefined||v===0){
+    if(r.reorder_suppressed_by_coverage){
+      const trig = r.reorder_trigger_coverage || 4.0;
+      const cov  = (r.total_coverage != null) ? Number(r.total_coverage).toFixed(2) : '—';
+      return `<span style="color:#546E7A;cursor:help" title="因 Total Coverage=${cov} ≥ 門檻 ${trig}，不建議返單（避免囤貨）">💤</span>`;
+    }
+    return '—';
+  }
+  return `<span style="color:var(--red);font-weight:700">${Number(v).toLocaleString()}</span>`;
+};
+
+// 返單警示徽章 — 🔴 需返單 / 🟡 佳樂告急 / 🔵 已下單待收 / ⏸️ 已停產 / '' 隱藏
+const reorderAlertTag = r => {
+  if(!r.reorder_alert) return '';
+  const t = r.reorder_alert;
+  const cls = t.includes('停產')  ? 'b-disc'  :
+              t.includes('返單')  ? 'b-red'   :
+              t.includes('佳樂')  ? 'b-yellow':
+              t.includes('已下單')? 'b-blue'  : 'b-green';
+  return `<span class="badge ${cls}">${t}</span>`;
+};
+
+// 交期倒數 v2 (Option C: 可撐 − 交期，正=還可等，負=已延遲)
+// 只在有返單需求時顯示
+const leadTimeCell = r => {
+  if(!r.reorder_qty || r.reorder_qty <= 0) return '—';
+  const v = r.days_until_late;
+  if(v===null||v===undefined) return '—';
+  if(v > 7)   return `<span style="color:var(--green);font-weight:600" title="還可再等 ${v} 天下單">+${v} 天</span>`;
+  if(v > 0)   return `<span style="color:#E65100;font-weight:700" title="快來不及了">+${v} 天</span>`;
+  if(v === 0) return `<span style="color:#E65100;font-weight:700">今天！</span>`;
+  return `<span style="color:var(--red);font-weight:700" title="已錯過建議下單日">⚠️ 延遲 ${-v} 天</span>`;
+};
+
+// 整箱返單量 — 顯示 units + (N 箱)；被 Coverage 抑制時 💤
+const caseReorderCell = r => {
+  const v = r.case_reorder_qty;
+  const n = r.case_reorder_count;
+  if(!v || v <= 0){
+    if(r.reorder_suppressed_by_coverage) return `<span style="color:#546E7A;cursor:help" title="因 Coverage 抑制返單">💤</span>`;
+    return '—';
+  }
+  return `<span style="color:var(--red);font-weight:700">${Number(v).toLocaleString()}</span> <span style="color:var(--text3);font-size:9px">(${n}箱)</span>`;
+};
+
+// 建議下單日 — 只在有返單需求時顯示；已延遲時標紅（因為日期會是「今天」）
+const orderDateCell = r => {
+  const d = r.suggested_order_date;
+  if(!r.reorder_qty || r.reorder_qty <= 0) return '—';
+  if(!d) return '—';
+  const late = (r.days_until_late !== null && r.days_until_late !== undefined && r.days_until_late < 0);
+  const soon = (r.days_until_late !== null && r.days_until_late !== undefined && r.days_until_late <= 7);
+  const cls = late ? 'color:var(--red);font-weight:700' :
+              soon ? 'color:#E65100;font-weight:700' :
+              'color:var(--text2);font-weight:600';
+  const mmdd = d.substring(5); // MM-DD
+  return `<span style="${cls}" title="${d}">${mmdd}</span>`;
+};
+
+// 欠數 — > 0 用藍色（代表已下單、在途）
+const pendingCell = r => {
+  const v = r.pending_qty;
+  if(v===null||v===undefined||v===0) return '—';
+  return `<span style="color:#1976D2;font-weight:700" title="已向工廠下單，尚未交付">${Number(v).toLocaleString()}</span>`;
+};
+
+// 下單日期 — 純顯示（MM/DD）
+const orderDateOnlyCell = r => {
+  const d = r.order_date;
+  if(!d) return '—';
+  return `<span style="color:#455A64" title="${d}">${d.substring(5).replace('-','/')}</span>`;
+};
+
+// 約定交期 — 顯示日期，若已逾期附紅字警示（若有工廠回覆，逾期由工廠欄顯示）
+const expectedDateCell = r => {
+  const d = r.expected_date;
+  if(!d) return '—';
+  const overdue = r.overdue_days || 0;
+  const hasFactory = !!r.factory_confirmed_date;
+  const mmdd = d.substring(5).replace('-','/');
+  if(!hasFactory && overdue > 0){
+    return `<span style="color:var(--red);font-weight:700" title="${d} · 已逾期">${mmdd} ⚠️ 逾期 ${overdue}天</span>`;
+  }
+  return `<span style="color:#455A64" title="${d}">${mmdd}</span>`;
+};
+
+// 工廠回覆交期 — 顯示日期 + 提前/延後 badge；逾期紅字
+const factoryConfirmedCell = r => {
+  const d = r.factory_confirmed_date;
+  if(!d) return '—';
+  const advance = r.delivery_advance_days;
+  const overdue = r.overdue_days || 0;
+  const mmdd = d.substring(5).replace('-','/');
+  if(overdue > 0){
+    return `<span style="color:var(--red);font-weight:700" title="${d} · 已逾期">${mmdd} ⚠️ 逾期 ${overdue}天</span>`;
+  }
+  let badge = '';
+  if(advance !== null && advance !== undefined){
+    if(advance > 0){
+      badge = ` <span style="color:var(--green);font-size:9px;font-weight:700">提前 ${advance}天</span>`;
+    } else if(advance < 0){
+      badge = ` <span style="color:#E65100;font-size:9px;font-weight:700">延後 ${-advance}天</span>`;
+    }
+  }
+  return `<span style="color:#1B5E20;font-weight:600" title="${d}">${mmdd}</span>${badge}`;
+};
+
+// 美國虛擬 Month — 現貨+欠數 / 月銷量；< 1 紅字
+const usVirtualMonthCell = r => {
+  const v = r.us_virtual_month;
+  if(v===null||v===undefined) return '—';
+  const val = Number(v).toFixed(2);
+  if(v < 1) return `<span style="color:var(--red);font-weight:700" title="含欠數">${val}</span>`;
+  return `<span title="含欠數">${val}</span>`;
+};
+
+// SKU 欄：若同 ASIN 對應多個 SKU，顯示 SKU 加徽章「N SKUs」，滑鼠移過看所有 SKU
+const skuCell = r => {
+  const skuHtml = `<span style="font-weight:700">${r.sku||''}</span>`;
+  if(r.sku_count && r.sku_count > 1){
+    const alts = (r.all_skus||'').split(',').map(s=>s.trim()).filter(s=>s!==r.sku);
+    const tip  = `同 ASIN 有 ${r.sku_count} 個 SKU：\n${(r.all_skus||'').replace(/, /g, '\n')}`;
+    return `${skuHtml}<span class="badge b-multi" title="${tip}" style="margin-left:4px">⚠️ ${r.sku_count} SKUs</span>${alts.length?`<div style="font-size:9px;color:var(--text3);margin-top:2px;line-height:1.2">alt: ${alts.join(', ')}</div>`:''}`;
+  }
+  return skuHtml;
+};
+
+const renderers = {typeTag,fbaMonthCell,awdMonthCell,covCell,replenCell,seaCell,airTag,capTag,skuCell,usMonthCell,szTotalMonthCell,transferCell,safetyCell,reorderQtyCell,reorderAlertTag,leadTimeCell,pendingCell,usVirtualMonthCell,caseReorderCell,orderDateCell,immedCovCell,totalPipeCell,orderDateOnlyCell,expectedDateCell,factoryConfirmedCell};
 
 function cellVal(col, row) {
   if(col.r) return renderers[col.r](row);
@@ -630,10 +1176,12 @@ function cellVal(col, row) {
 // ── Data & Render ─────────────────────────────────────────────────────────────
 async function loadData() {
   document.getElementById('tbody').innerHTML =
-    '<tr><td colspan="28" class="empty"><div class="spinner"></div> 載入中...</td></tr>';
+    '<tr><td colspan="40" class="empty"><div class="spinner"></div> 載入中...</td></tr>';
   try {
+    // 讀當前選的 marketplace，預設 US
+    const mp = document.getElementById('f-marketplace')?.value || 'ATVPDKIKX0DER';
     const [repRes, catRes, awdRes, szRes] = await Promise.all([
-      fetch(`${API}/replenishment`),
+      fetch(`${API}/replenishment?marketplace_id=${mp}`),
       fetch(`${API}/etl/catalog/status`),
       fetch(`${API}/etl/awd/status`),
       fetch(`${API}/etl/sz/status`),
@@ -644,6 +1192,8 @@ async function loadData() {
     const sz  = await szRes.json();
 
     allData = rep.data || [];
+    // 儲存動態閾值供 renderer 用（Total Pipeline 分級著色）
+    window._thresholds = rep.thresholds || {air_threshold: 2.83, total_cap_months: 5.0};
 
     // KPIs
     document.getElementById('k-total').textContent = allData.length;
@@ -664,7 +1214,16 @@ async function loadData() {
 
     document.getElementById('k-sz').textContent    = sz.total_skus||0;
     document.getElementById('k-sz-sub').textContent = sz.last_upload
-      ? '更新:'+sz.last_upload.substring(0,10) : '尚未上傳';
+      ? `更新:${sz.last_upload.substring(0,10)} (${sz.days_old ?? '?'}天前)`
+      : '尚未上傳';
+    // 過期警示（>7 天沒更新）
+    const stale = document.getElementById('sz-stale-warn');
+    if(sz.is_stale && sz.days_old !== null){
+      stale.style.display = 'block';
+      stale.innerHTML = `⚠️ <b>SZ 資料已 ${sz.days_old} 天沒更新</b>（超過 ${sz.stale_threshold_days} 天門檻）— 請下載最新 Template 更新庫存數字。`;
+    } else {
+      stale.style.display = 'none';
+    }
 
     // Populate Collection filter
     const colls = [...new Set(allData.map(r=>r.collection||'').filter(Boolean))].sort();
@@ -678,7 +1237,7 @@ async function loadData() {
     render();
   } catch(e) {
     document.getElementById('tbody').innerHTML =
-      `<tr><td colspan="28" class="empty">⚠️ API 連線失敗: ${e.message}</td></tr>`;
+      `<tr><td colspan="40" class="empty">⚠️ API 連線失敗: ${e.message}</td></tr>`;
   }
 }
 
@@ -713,7 +1272,7 @@ function render() {
 
   if(!rows.length){
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="29" class="empty">無符合條件的資料</td></tr>';
+      '<tr><td colspan="40" class="empty">無符合條件的資料</td></tr>';
     return;
   }
 
@@ -738,6 +1297,7 @@ const UPLOAD_URLS = {
   catalog: '/etl/catalog/upload',
   sz:      '/etl/sz/upload',
   awd:     '/etl/awd/upload',
+  fba:     '/etl/inventory/upload',
 };
 
 async function uploadFile(type) {
@@ -745,15 +1305,34 @@ async function uploadFile(type) {
   const status = document.getElementById(`${type}-status`);
   if(!input.files.length){ status.textContent='請選擇檔案'; return; }
 
+  const fileName = input.files[0].name;
+
+  // FBA 上傳需獨立選擇 marketplace_id（不跟 dashboard filter 綁定，避免搞錯）
+  // 其他類型（catalog / sz / awd）跨站點共用，不需要
+  let url = UPLOAD_URLS[type];
+  let mpDisplay = '';
+  if (type === 'fba') {
+    const sel = document.getElementById('fba-upload-marketplace');
+    const mp = sel?.value || 'ATVPDKIKX0DER';
+    mpDisplay = sel?.selectedOptions[0]?.text || mp;
+    url += `?marketplace_id=${encodeURIComponent(mp)}`;
+    // 每次上傳都二次確認（防呆核心）— 顯示檔名 + 目標站點
+    if (!confirm(`確認上傳？\n\n檔案：${fileName}\n目標站點：${mpDisplay}\n\n此操作會覆蓋該站點該日期的既有資料。`)) {
+      status.textContent='已取消'; status.className='status-msg';
+      return;
+    }
+  }
+
   const fd = new FormData();
   fd.append('file', input.files[0]);
   status.textContent='上傳中…'; status.className='status-msg';
 
   try{
-    const res  = await fetch(UPLOAD_URLS[type], {method:'POST', body:fd});
+    const res  = await fetch(url, {method:'POST', body:fd});
     const data = await res.json();
     if(res.ok){
-      status.textContent=`✓ ${data.rows_upserted} 筆`;
+      const suffix = mpDisplay ? ` → ${mpDisplay}` : '';
+      status.textContent=`✓ ${data.rows_upserted} 筆${suffix}`;
       status.className='status-msg ok';
       setTimeout(loadData, 400);
     } else {
@@ -763,6 +1342,113 @@ async function uploadFile(type) {
   } catch(e){
     status.textContent=`✗ ${e.message}`;
     status.className='status-msg err';
+  }
+}
+
+// 開啟 dashboard 時，FBA 上傳站點預設同步為當前檢視站點（可自由改）
+document.addEventListener('DOMContentLoaded', () => {
+  const filter = document.getElementById('f-marketplace');
+  const uploader = document.getElementById('fba-upload-marketplace');
+  if (filter && uploader) {
+    uploader.value = filter.value;
+    filter.addEventListener('change', () => { uploader.value = filter.value; });
+  }
+});
+
+// ── 資料串接健康度 + 異常 panel ──────────────────────────────────────────────
+async function loadHealthPanels() {
+  try {
+    const mp = document.getElementById('f-marketplace')?.value || 'ATVPDKIKX0DER';
+    const [hRes, aRes] = await Promise.all([
+      fetch(`/etl/health/summary?marketplace_id=${encodeURIComponent(mp)}`),
+      fetch(`/etl/health/anomalies?since_hours=24&limit=50&marketplace_id=${encodeURIComponent(mp)}`),
+    ]);
+    const h = await hRes.json();
+    const a = await aRes.json();
+
+    // 健康度表格
+    const body = document.getElementById('health-body');
+    body.innerHTML = h.pipelines.map(p => {
+      const statCls = p.status==='critical' ? 'background:#FFEBEE;color:#B71C1C;font-weight:700' :
+                      p.status==='warning'  ? 'background:#FFF3E0;color:#E65100;font-weight:700' :
+                                              'background:#E8F5E9;color:#2E7D32;font-weight:600';
+      const icon    = p.status==='critical' ? '🔴' : p.status==='warning' ? '🟡' : '✅';
+      const daysTxt = p.days_old===null ? '—' : (p.days_old===0 ? '今天' : `${p.days_old}天前`);
+      const anomTxt = (p.anomalies_24h.critical||p.anomalies_24h.warning)
+        ? `🔴 ${p.anomalies_24h.critical}｜🟡 ${p.anomalies_24h.warning}`
+        : '—';
+      const totalTxt   = p.total_skus       == null ? '—' : p.total_skus;
+      const stockTxt   = p.stocked_skus     == null ? '—' : p.stocked_skus;
+      const covTxt     = p.coverage_pct     == null ? '—' : p.coverage_pct+'%';
+      return `<tr style="border-top:1px solid #ECEFF1">
+        <td style="padding:4px 6px;font-weight:600">${p.name}</td>
+        <td style="padding:4px 6px;text-align:center">${daysTxt}</td>
+        <td style="padding:4px 6px;text-align:center">${totalTxt}</td>
+        <td style="padding:4px 6px;text-align:center">${stockTxt}</td>
+        <td style="padding:4px 6px;text-align:center">${covTxt}</td>
+        <td style="padding:4px 6px;text-align:center;font-size:9.5px">${anomTxt}</td>
+        <td style="padding:4px 6px;text-align:center"><span style="padding:2px 6px;border-radius:4px;${statCls}">${icon} ${p.status==='ok'?'正常':p.reason}</span></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="7" style="text-align:center;color:#999;padding:6px">尚無資料</td></tr>';
+
+    // 異常清單
+    document.getElementById('anom-count').textContent = a.count>0 ? `${a.count} 筆待處理` : '✅ 目前無異常';
+    const list = document.getElementById('anom-list');
+    if (a.count === 0) {
+      list.innerHTML = '<div style="color:#2E7D32;text-align:center;padding:12px;font-weight:600">✅ 過去 24h 無資料異常</div>';
+    } else {
+      list.innerHTML = a.anomalies.slice(0, 20).map(x => {
+        const sevCls = x.severity==='critical' ? 'color:#B71C1C;font-weight:700' :
+                       x.severity==='warning'  ? 'color:#E65100;font-weight:600' :
+                                                 'color:#616161';
+        const icon   = x.severity==='critical' ? '🔴' : x.severity==='warning' ? '🟡' : 'ℹ️';
+        const time   = x.detected_at.substring(5, 16); // MM-DD HH:MM
+        const skuLbl = x.sku === '__aggregate__' ? '整表' : x.sku;
+        return `<div style="padding:5px 6px;border-bottom:1px solid #F0F0F0">
+          <div style="${sevCls}">${icon} <b>${skuLbl}</b> <span style="color:#999;font-size:9px">${time}</span></div>
+          <div style="color:#546E7A;font-size:10px;margin-top:1px">${x.pipeline} · ${x.reason}</div>
+          <button class="btn btn-sm" style="background:#eee;font-size:9px;padding:1px 6px;margin-top:2px" onclick="ackAnomaly(${x.id})">已處理</button>
+        </div>`;
+      }).join('');
+    }
+  } catch (e) {
+    document.getElementById('health-body').innerHTML =
+      `<tr><td colspan="7" style="color:red;text-align:center;padding:6px">健康度載入失敗: ${e.message}</td></tr>`;
+    document.getElementById('anom-list').innerHTML =
+      `<div style="color:red;text-align:center;padding:6px">異常清單載入失敗: ${e.message}</div>`;
+  }
+}
+
+async function ackAnomaly(id) {
+  try {
+    const res = await fetch('/etl/health/anomalies/ack', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ids: [id]}),
+    });
+    if (res.ok) loadHealthPanels();
+  } catch (e) {
+    alert('標記失敗: ' + e.message);
+  }
+}
+
+// ── SZ Template 下載 ─────────────────────────────────────────────────────────
+async function downloadSzTemplate() {
+  const st = document.getElementById('sz-status');
+  st.textContent = '產生中…'; st.className = 'status-msg';
+  try {
+    const res = await fetch('/etl/sz/template');
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `SZ_Warehouse_Upload_Template_${new Date().toISOString().substring(0,10).replace(/-/g,'')}.xlsx`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    st.textContent = '✓ 下載完成，填完再上傳'; st.className = 'status-msg ok';
+  } catch (e) {
+    st.textContent = `✗ ${e.message}`; st.className = 'status-msg err';
   }
 }
 
@@ -806,6 +1492,44 @@ async function syncAwd() {
   }
 }
 
+// ── AWD Report 觸發（SP-API 官方 Report，5-15 min）─────────────────────────
+async function syncAwdReport() {
+  const st = document.getElementById('awd-status');
+  st.textContent = '⏳ 已觸發 Report（等 5-15 分鐘）'; st.className = 'status-msg';
+  try {
+    const res  = await fetch('/etl/awd/report-sync', {method:'POST'});
+    const data = await res.json();
+    if (!res.ok) {
+      st.textContent = `✗ ${data.detail || '觸發失敗'}`; st.className = 'status-msg err';
+      return;
+    }
+    st.textContent = `✓ Report run#${data.run_id} 執行中（Amazon 產報告約 5-15 分鐘）`;
+    let tries = 0;
+    const poll = setInterval(async () => {
+      tries++;
+      try {
+        const s = await (await fetch('/etl/awd/report-status')).json();
+        const rs = s.status;
+        if (rs === 'success') {
+          clearInterval(poll);
+          st.textContent = `✓ Report 完成：${s.rows_written} SKU 已覆蓋`;
+          st.className = 'status-msg ok';
+          setTimeout(() => { loadData(); loadHealthPanels(); }, 800);
+        } else if (rs === 'error') {
+          clearInterval(poll);
+          st.textContent = `✗ Report 失敗：${s.error_message || 'unknown'}`;
+          st.className = 'status-msg err';
+        } else if (tries > 60) {   // 5 分鐘 * 60 = 30 分鐘
+          clearInterval(poll);
+          st.textContent = '⏳ Report 仍在執行，稍後手動查 /etl/awd/report-status';
+        }
+      } catch (_) {}
+    }, 30 * 1000);   // 每 30 秒 poll 一次
+  } catch (e) {
+    st.textContent = `✗ ${e.message}`; st.className = 'status-msg err';
+  }
+}
+
 // ── CSV Export ────────────────────────────────────────────────────────────────
 function exportCsv(){ window.open('/replenishment/export','_blank'); }
 
@@ -825,8 +1549,10 @@ function renderCfg(rows){
         <span style="font-weight:400;color:var(--text3);font-size:10px">${r.collection||''}</span></div>
       <select id="ct-${r.sku}" style="font-size:11px">
         <option value="" ${!r.product_type?'selected':''}>未設定</option>
+        <option value="Rocket" ${r.product_type==='Rocket'?'selected':''}>🚀 Rocket</option>
         <option value="流量款" ${r.product_type==='流量款'?'selected':''}>流量款</option>
         <option value="一般款" ${r.product_type==='一般款'?'selected':''}>一般款</option>
+        <option value="Discontinued" ${r.product_type==='Discontinued'?'selected':''}>⏸️ Discontinued</option>
       </select>
       <input id="cu-${r.sku}" type="number" min="1" value="${r.unit_per_case||1}" style="font-size:11px;text-align:center">
       <input id="ce-${r.sku}" type="text" value="${r.eta||''}" placeholder="e.g. 05/01" style="font-size:11px">
@@ -879,7 +1605,7 @@ async function openControls() {
     const res  = await fetch('/replenishment/controls');
     const data = await res.json();
     const keys = ['production_days','sea_days','awd_target_normal','awd_target_hero',
-                  'total_cap_months','sz_level_normal','sz_level_hero'];
+                  'total_cap_months','sz_level_normal','sz_level_hero','sz_level_rocket','sz_transfer_level_normal','sz_transfer_level_hero','sz_transfer_level_rocket','awd_target_rocket','transfer_trigger_coverage','reorder_trigger_coverage'];
     keys.forEach(k => {
       const el = document.getElementById(`c-${k}`);
       if(el) el.value = data[k]?.value ?? '';
@@ -908,7 +1634,7 @@ function _updateAirHint() {
 
 async function saveControls() {
   const keys = ['production_days','sea_days','awd_target_normal','awd_target_hero',
-                'total_cap_months','sz_level_normal','sz_level_hero'];
+                'total_cap_months','sz_level_normal','sz_level_hero','sz_level_rocket','sz_transfer_level_normal','sz_transfer_level_hero','sz_transfer_level_rocket','awd_target_rocket','transfer_trigger_coverage','reorder_trigger_coverage'];
   const payload = {};
   for(const k of keys) {
     const el = document.getElementById(`c-${k}`);
@@ -939,6 +1665,9 @@ document.getElementById('ctrl-modal').addEventListener('click', function(e){
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadData();
+loadHealthPanels();
+// 每 5 分鐘自動重整健康度 & 異常
+setInterval(loadHealthPanels, 5 * 60 * 1000);
 
 // ════════════════════════════════════════════════════════════════════════════
 // TAB SWITCHING
@@ -946,437 +1675,1349 @@ loadData();
 function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.tab === tab));
+
   document.querySelectorAll('.tab-content').forEach(c =>
     c.classList.toggle('active', c.id === 'tab-' + tab));
   if (tab === 'traffic' && !trafficRaw) loadTraffic();
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// TRAFFIC DASHBOARD
+// TRAFFIC DASHBOARD — 8 sections + cross-filter
 // ════════════════════════════════════════════════════════════════════════════
-let trafficRaw  = null;   // raw API response
-let tCharts     = {};     // Chart.js instances keyed by canvas id
-let tFiltered   = null;   // currently filtered slice
+let trafficRaw  = null;
+let tCharts     = {};
+let tFiltered   = null;
+let _growthRows    = [];
+let _growthSortKey = 'curr_revenue';
+let _growthSortAsc = false;
 
-const PIE_COLORS = [
-  '#1976D2','#E65100','#2E7D32','#6A1B9A','#AD1457',
-  '#00838F','#F57F17','#4527A0','#37474F','#BF360C',
-  '#1B5E20','#880E4F','#0D47A1','#558B2F','#4E342E',
+// Column definitions for growth table
+const _G_COLS = [
+  { key:'name',          label:'Name',       align:'left',   bg:'#1F2D3D', filter:'text'   },
+  { key:'collection',    label:'Collection', align:'left',   bg:'#1F2D3D', filter:'select' },
+  { key:'curr_sessions', label:'Sessions',   align:'right',  bg:'#1565C0', filter:false    },
+  { key:'d_sessions',    label:'Sessions Δ', align:'right',  bg:'#1565C0', filter:'dir'    },
+  { key:'curr_cvr',      label:'CVR%',       align:'right',  bg:'#2E7D32', filter:false    },
+  { key:'d_cvr',         label:'CVR Δ',      align:'right',  bg:'#2E7D32', filter:'dir'    },
+  { key:'curr_revenue',  label:'Revenue',    align:'right',  bg:'#4A148C', filter:false    },
+  { key:'d_revenue',     label:'Revenue Δ',  align:'right',  bg:'#4A148C', filter:'dir'    },
+  { key:'curr_units',    label:'Units',      align:'right',  bg:'#BF360C', filter:false    },
+  { key:'d_units',       label:'Units Δ',    align:'right',  bg:'#BF360C', filter:'dir'    },
+  { key:'_status',       label:'綜合狀態',   align:'center', bg:'#37474F', filter:'status' },
+];
+// Cross-filter state: clicking a chart bar filters all other charts + table
+let crossFilter = { type: null, value: null };
+
+// Tableau 10 colour palette
+const BAR_COLORS = [
+  '#4E79A7','#F28E2B','#E15759','#76B7B2','#59A14F',
+  '#EDC948','#B07AA1','#FF9DA7','#9C755F','#BAB0AC',
+  '#4E79A7','#F28E2B','#E15759','#76B7B2','#59A14F',
+  '#EDC948','#B07AA1','#FF9DA7','#9C755F','#BAB0AC',
 ];
 
-// ── Load & render ─────────────────────────────────────────────────────────
+// ── Cross-filter ──────────────────────────────────────────────────────────
+function setCrossFilter(type, value) {
+  if (crossFilter.type === type && crossFilter.value === value) {
+    crossFilter = { type: null, value: null };
+  } else {
+    crossFilter = { type, value };
+  }
+  _updateCfBadge();
+  applyTrafficFilter();
+}
+
+function clearCrossFilter() {
+  crossFilter = { type: null, value: null };
+  _updateCfBadge();
+  applyTrafficFilter();
+}
+
+function _updateCfBadge() {
+  const badge = document.getElementById('t-cf-badge');
+  const label = document.getElementById('t-cf-label');
+  if (crossFilter.value) {
+    const prefix = crossFilter.type === 'name' ? '📦 ' : '🏷 ';
+    label.textContent = prefix + crossFilter.value;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ── Load ──────────────────────────────────────────────────────────────────
 async function loadTraffic() {
-  const kpis = document.getElementById('t-kpis');
-  kpis.innerHTML = `<div class="card c-blue"><div class="lbl">載入中</div>
-    <div class="val"><div class="spinner"></div></div></div>`;
+  document.getElementById('t-kpis').innerHTML =
+    `<div class="card c-blue"><div class="lbl">載入中</div>
+     <div class="val"><div class="spinner"></div></div></div>`;
   try {
     const res = await fetch('/etl/traffic/data');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     trafficRaw = await res.json();
     _populateCollFilter();
     _populateMonthSel();
-    _initDateRange();          // set input[type=month] bounds + default 12M
+    _initDateRange();
     applyTrafficFilter();
   } catch(e) {
-    kpis.innerHTML = `<div class="card c-red">
-      <div class="lbl">載入失敗</div><div class="val" style="font-size:13px">⚠️</div>
-      <div class="sub">${e.message}</div></div>`;
+    document.getElementById('t-kpis').innerHTML =
+      `<div class="card c-red"><div class="lbl">載入失敗</div>
+       <div class="val">⚠️</div><div class="sub">${e.message}</div></div>`;
   }
 }
 
-// ── Date range helpers ────────────────────────────────────────────────────
+// ── Date helpers ──────────────────────────────────────────────────────────
 function _initDateRange() {
-  const avail    = trafficRaw.available_months;  // DESC order
-  const maxMonth = avail[0];
-  const minMonth = avail[avail.length - 1];
-
+  const avail = trafficRaw.available_months;
+  const max = avail[0], min = avail[avail.length-1];
   ['t-from','t-to'].forEach(id => {
     const el = document.getElementById(id);
-    el.min = minMonth;
-    el.max = maxMonth;
+    el.min = min; el.max = max;
   });
-
-  // Default active preset: 12M
-  document.getElementById('t-to').value = maxMonth;
-  const [y, m] = maxMonth.split('-').map(Number);
-  let fm = m - 11, fy = y;
-  while (fm <= 0) { fm += 12; fy--; }
-  const fromDef = `${fy}-${String(fm).padStart(2,'0')}`;
-  document.getElementById('t-from').value = fromDef < minMonth ? minMonth : fromDef;
+  document.getElementById('t-to').value = max;
+  const [y,m] = max.split('-').map(Number);
+  let fm=m-11, fy=y;
+  while(fm<=0){fm+=12;fy--;}
+  const fd = `${fy}-${String(fm).padStart(2,'0')}`;
+  document.getElementById('t-from').value = fd < min ? min : fd;
 }
 
 function setPreset(n, btn) {
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-
-  const avail    = trafficRaw?.available_months || [];
-  if (!avail.length) return;
-  const maxMonth = avail[0];
-  const minMonth = avail[avail.length - 1];
-
-  let fromMonth;
-  if (n === 0) {
-    fromMonth = minMonth;
-  } else {
-    const [y, m] = maxMonth.split('-').map(Number);
-    let fm = m - n + 1, fy = y;
-    while (fm <= 0) { fm += 12; fy--; }
-    fromMonth = `${fy}-${String(fm).padStart(2,'0')}`;
-    if (fromMonth < minMonth) fromMonth = minMonth;
+  const avail = trafficRaw?.available_months||[];
+  if(!avail.length) return;
+  const max=avail[0], min=avail[avail.length-1];
+  let from;
+  if(n===0){ from=min; } else {
+    const [y,m]=max.split('-').map(Number);
+    let fm=m-n+1,fy=y;
+    while(fm<=0){fm+=12;fy--;}
+    from=`${fy}-${String(fm).padStart(2,'0')}`;
+    if(from<min) from=min;
   }
-
-  document.getElementById('t-from').value = fromMonth;
-  document.getElementById('t-to').value   = maxMonth;
+  document.getElementById('t-from').value=from;
+  document.getElementById('t-to').value=max;
   applyTrafficFilter();
 }
 
 function clearPreset() {
-  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
 }
+
+// ── Multi-select Collection slicer ────────────────────────────────────────
+let _allColls = [];
 
 function _populateCollFilter() {
-  const sel = document.getElementById('t-coll');
-  const colls = [...new Set(trafficRaw.by_collection.map(r => r.collection))].sort();
-  sel.innerHTML = '<option value="">全部</option>' +
-    colls.map(c => `<option value="${c}">${c}</option>`).join('');
+  _allColls = [...new Set(trafficRaw.by_collection.map(r=>r.collection))].sort();
+  _renderCollList(_allColls);
 }
+
+function _renderCollList(colls) {
+  document.getElementById('t-coll-list').innerHTML = colls.map(c => {
+    const checked = _getSelectedColls().includes(c) ? 'checked' : '';
+    return `<div class="multisel-item">
+      <input type="checkbox" id="cb-${c.replace(/[^a-zA-Z0-9]/g,'_')}"
+        value="${c}" ${checked} onchange="applyTrafficFilter();_updateCollBtn()">
+      <label for="cb-${c.replace(/[^a-zA-Z0-9]/g,'_')}">${c}</label>
+    </div>`;
+  }).join('');
+}
+
+function filterCollPanel() {
+  const q = document.getElementById('t-coll-search').value.toLowerCase();
+  _renderCollList(_allColls.filter(c => c.toLowerCase().includes(q)));
+}
+
+function _getSelectedColls() {
+  return [...document.querySelectorAll('#t-coll-list input[type=checkbox]:checked')]
+    .map(cb => cb.value);
+}
+
+function _updateCollBtn() {
+  const sel = _getSelectedColls();
+  const btn = document.getElementById('t-coll-btn');
+  const badge = document.getElementById('t-coll-badge');
+  if(sel.length > 0) {
+    badge.textContent = sel.length;
+    badge.style.display = 'inline';
+    btn.classList.add('has-sel');
+  } else {
+    badge.style.display = 'none';
+    btn.classList.remove('has-sel');
+  }
+}
+
+function toggleCollPanel(e) {
+  e.stopPropagation();
+  document.getElementById('t-coll-panel').classList.toggle('open');
+}
+
+function selectAllColls() {
+  document.querySelectorAll('#t-coll-list input[type=checkbox]')
+    .forEach(cb => cb.checked = true);
+  _updateCollBtn(); applyTrafficFilter();
+}
+
+function clearAllColls() {
+  document.querySelectorAll('#t-coll-list input[type=checkbox]')
+    .forEach(cb => cb.checked = false);
+  _updateCollBtn(); applyTrafficFilter();
+}
+
+// Close panel when clicking outside
+document.addEventListener('click', e => {
+  if(!document.getElementById('t-coll-wrap')?.contains(e.target))
+    document.getElementById('t-coll-panel')?.classList.remove('open');
+});
 
 function _populateMonthSel() {
-  const sel = document.getElementById('t-month-sel');
-  sel.innerHTML = '<option value="">全部</option>' +
-    trafficRaw.available_months.map(m => `<option value="${m}">${m}</option>`).join('');
+  document.getElementById('t-month-sel').innerHTML=
+    '<option value="">全部</option>'+
+    trafficRaw.available_months.map(m=>`<option value="${m}">${m}</option>`).join('');
 }
 
+// ── Main filter & aggregate ───────────────────────────────────────────────
 function applyTrafficFilter() {
-  if (!trafficRaw) return;
-  const from     = document.getElementById('t-from')?.value || '';   // YYYY-MM
-  const to       = document.getElementById('t-to')?.value   || '';
-  const collFilt = document.getElementById('t-coll')?.value || '';
+  if(!trafficRaw) return;
+  const from      = document.getElementById('t-from')?.value||'';
+  const to        = document.getElementById('t-to')?.value||'';
+  const selColls  = _getSelectedColls();  // [] = 全部, [...] = 指定 collections
 
-  // ── Filter detail rows (source of truth for all aggregates) ────────────
-  const filteredDetail = trafficRaw.detail.filter(r => {
-    if (from && r.month < from) return false;
-    if (to   && r.month > to)   return false;
-    if (collFilt && r.collection !== collFilt) return false;
+  // Filter detail — source of truth for all aggregates
+  const detail = trafficRaw.detail.filter(r => {
+    if(from && r.month < from) return false;
+    if(to   && r.month > to)   return false;
+    if(selColls.length > 0 && !selColls.includes(r.collection)) return false;
+    // cross-filter
+    if(crossFilter.type==='collection' && r.collection !== crossFilter.value) return false;
+    if(crossFilter.type==='name'       && r.product_name !== crossFilter.value) return false;
     return true;
   });
 
-  // ── Re-aggregate monthly trends ─────────────────────────────────────────
-  const monthMap = {};
-  filteredDetail.forEach(r => {
-    if (!monthMap[r.month]) monthMap[r.month] = {
-      month: r.month, sessions: 0, page_views: 0, total_units: 0, total_revenue: 0,
-    };
-    monthMap[r.month].sessions      += r.sessions   || 0;
-    monthMap[r.month].page_views    += r.page_views || 0;
-    monthMap[r.month].total_units   += r.units      || 0;
-    monthMap[r.month].total_revenue += r.revenue    || 0;
+  // Monthly trends (incl. cost & profit)
+  const mMap={};
+  detail.forEach(r=>{
+    if(!mMap[r.month]) mMap[r.month]={month:r.month,sessions:0,total_units:0,total_revenue:0,total_cog:0,total_fba:0};
+    mMap[r.month].sessions      += r.sessions||0;
+    mMap[r.month].total_units   += r.units||0;
+    mMap[r.month].total_revenue += r.revenue||0;
+    mMap[r.month].total_cog     += (r.units||0)*(r.cog||0);
+    mMap[r.month].total_fba     += (r.units||0)*(r.fba_fee||0);
   });
-  const months = Object.values(monthMap)
-    .map(r => ({
-      ...r,
-      cvr: r.sessions > 0
-        ? Math.round(r.total_units / r.sessions * 10000) / 100
-        : 0,
-    }))
-    .sort((a, b) => a.month.localeCompare(b.month));
+  const months = Object.values(mMap)
+    .map(r=>{
+      const referral = r.total_revenue * 0.15;
+      const cost     = r.total_cog + r.total_fba + referral;
+      const profit   = r.total_revenue - cost;
+      const margin   = r.total_revenue > 0 ? Math.round(profit / r.total_revenue * 1000) / 10 : 0;
+      return {...r,
+        cvr:      r.sessions > 0 ? Math.round(r.total_units/r.sessions*10000)/100 : 0,
+        total_cost: cost, referral, profit, margin};
+    })
+    .sort((a,b)=>a.month.localeCompare(b.month));
 
-  // ── Re-aggregate by Collection ──────────────────────────────────────────
-  const collMap = {};
-  filteredDetail.forEach(r => {
-    const c = r.collection || 'Unknown';
-    if (!collMap[c]) collMap[c] = { collection: c, sessions: 0, total_units: 0, total_revenue: 0 };
-    collMap[c].sessions      += r.sessions || 0;
-    collMap[c].total_units   += r.units    || 0;
-    collMap[c].total_revenue += r.revenue  || 0;
+  // By collection
+  const cMap={};
+  detail.forEach(r=>{
+    const c=r.collection||'Unknown';
+    if(!cMap[c]) cMap[c]={collection:c,sessions:0,total_units:0,total_revenue:0,total_var_cost:0};
+    cMap[c].sessions      += r.sessions||0;
+    cMap[c].total_units   += r.units||0;
+    cMap[c].total_revenue += r.revenue||0;
+    cMap[c].total_var_cost+= (r.units||0)*((r.cog||0)+(r.fba_fee||0));
   });
-  const byCollection = Object.values(collMap)
-    .sort((a, b) => b.total_revenue - a.total_revenue);
+  const byCollection = Object.values(cMap)
+    .map(r=>{
+      const referral = r.total_revenue * 0.15;
+      const total_cost = r.total_var_cost + referral;
+      const profit = r.total_revenue - total_cost;
+      return {...r, total_cost, profit,
+        margin: r.total_revenue>0 ? Math.round(profit/r.total_revenue*1000)/10 : 0};
+    })
+    .sort((a,b)=>b.total_revenue-a.total_revenue);
 
-  // ── Re-aggregate by SKU ─────────────────────────────────────────────────
-  const skuMap = {};
-  filteredDetail.forEach(r => {
-    const k = r.sku || '—';
-    if (!skuMap[k]) skuMap[k] = {
-      sku: r.sku, collection: r.collection, product_name: r.product_name,
-      sessions: 0, total_units: 0, total_revenue: 0,
-    };
-    skuMap[k].sessions      += r.sessions || 0;
-    skuMap[k].total_units   += r.units    || 0;
-    skuMap[k].total_revenue += r.revenue  || 0;
+  // By name (product)
+  const nMap={};
+  detail.forEach(r=>{
+    const k=r.product_name||r.sku||'—';
+    if(!nMap[k]) nMap[k]={name:k,collection:r.collection,sessions:0,total_units:0,total_revenue:0,total_var_cost:0,cog:r.cog||0,fba_fee:r.fba_fee||0};
+    nMap[k].sessions      += r.sessions||0;
+    nMap[k].total_units   += r.units||0;
+    nMap[k].total_revenue += r.revenue||0;
+    nMap[k].total_var_cost+= (r.units||0)*((r.cog||0)+(r.fba_fee||0));
   });
-  const topSkus = Object.values(skuMap)
-    .sort((a, b) => b.total_revenue - a.total_revenue);
+  const byName = Object.values(nMap)
+    .map(r=>{
+      const referral = r.total_revenue * 0.15;
+      return {...r,
+        msrp:   r.total_units>0 ? Math.round(r.total_revenue/r.total_units*100)/100 : 0,
+        profit: r.total_revenue - r.total_var_cost - referral,
+        total_cost: r.total_var_cost + referral,
+      };
+    })
+    .sort((a,b)=>b.total_revenue-a.total_revenue);
 
-  tFiltered = { months, byCollection, topSkus };
+  tFiltered = { months, byCollection, byName, detail };
   renderTrafficDashboard();
 }
 
-// ── Render all ────────────────────────────────────────────────────────────
+// ── Render all 8 sections ─────────────────────────────────────────────────
 function renderTrafficDashboard() {
-  if (!tFiltered) return;
-  const { months, byCollection, topSkus } = tFiltered;
+  if(!tFiltered) return;
+  const {months, byCollection, byName, detail} = tFiltered;
 
-  // KPI
-  const totSessions = months.reduce((s, r) => s + (r.sessions  || 0), 0);
-  const totUnits    = months.reduce((s, r) => s + (r.total_units   || 0), 0);
-  const totRevenue  = months.reduce((s, r) => s + (r.total_revenue || 0), 0);
-  const avgCvr      = totSessions > 0
-    ? (totUnits / totSessions * 100).toFixed(2) : '0.00';
-
+  // ① KPI cards
+  const totS = months.reduce((s,r)=>s+(r.sessions||0),0);
+  const totU = months.reduce((s,r)=>s+(r.total_units||0),0);
+  const totR = months.reduce((s,r)=>s+(r.total_revenue||0),0);
+  const avgCvr  = totS>0 ? (totU/totS*100).toFixed(2) : '0.00';
+  const avgMsrp = totU>0 ? (totR/totU).toFixed(2) : '0.00';
   document.getElementById('t-kpis').innerHTML = `
-    <div class="card c-blue">
-      <div class="lbl">Sessions</div>
-      <div class="val">${fmtK(totSessions)}</div>
-      <div class="sub">期間合計</div>
-    </div>
-    <div class="card c-green">
-      <div class="lbl">整體 CVR%</div>
-      <div class="val">${avgCvr}%</div>
-      <div class="sub">Units ÷ Sessions</div>
-    </div>
-    <div class="card c-orange">
-      <div class="lbl">Units Ordered</div>
-      <div class="val">${fmtK(totUnits)}</div>
-      <div class="sub">期間合計</div>
-    </div>
-    <div class="card c-blue">
-      <div class="lbl">Revenue</div>
-      <div class="val">$${fmtRev(totRevenue)}</div>
-      <div class="sub">期間合計</div>
-    </div>`;
+    <div class="card c-blue"><div class="lbl">Sessions</div>
+      <div class="val">${fmtK(totS)}</div><div class="sub">期間合計</div></div>
+    <div class="card c-green"><div class="lbl">AVG CVR%</div>
+      <div class="val">${avgCvr}%</div><div class="sub">Units ÷ Sessions</div></div>
+    <div class="card c-orange"><div class="lbl">Units Sold</div>
+      <div class="val">${fmtK(totU)}</div><div class="sub">期間合計</div></div>
+    <div class="card c-blue"><div class="lbl">Total Sales</div>
+      <div class="val">$${fmtRev(totR)}</div><div class="sub">期間合計</div></div>
+    <div class="card c-green"><div class="lbl">AVG ASP</div>
+      <div class="val">$${avgMsrp}</div><div class="sub">Sales ÷ Units</div></div>`;
 
-  // Pie charts
-  const top10Rev   = [...topSkus].sort((a,b) => b.total_revenue - a.total_revenue).slice(0,10);
-  const top10Units = [...topSkus].sort((a,b) => b.total_units   - a.total_units  ).slice(0,10);
+  // ★ A: Monthly P&L
+  renderMonthlyPL(months);
+  // ★ B: MoM Strip
+  _populateMoMSel(months);
+  renderMoMStrip();
 
+  // ② Revenue by Collection + by Name (top 12) — pie charts
   renderPie('c-rev-coll',
-    byCollection.map(r => r.collection),
-    byCollection.map(r => r.total_revenue),
-    v => '$' + fmtRev(v));
+    byCollection.slice(0,12).map(r=>r.collection),
+    byCollection.slice(0,12).map(r=>r.total_revenue),
+    'collection', v=>'$'+fmtRev(v));
+  const top12RevName = byName.slice(0,12);
+  renderPie('c-rev-name',
+    top12RevName.map(r=>r.name),
+    top12RevName.map(r=>r.total_revenue),
+    'name', v=>'$'+fmtRev(v));
 
+  // ③ Units by Collection + by Name (top 12) — pie charts
+  const byCollU = [...byCollection].sort((a,b)=>b.total_units-a.total_units);
   renderPie('c-units-coll',
-    byCollection.map(r => r.collection),
-    byCollection.map(r => r.total_units),
-    v => fmtK(v) + ' units');
+    byCollU.slice(0,12).map(r=>r.collection),
+    byCollU.slice(0,12).map(r=>r.total_units),
+    'collection', v=>fmtK(v)+' units');
+  const top12UName = [...byName].sort((a,b)=>b.total_units-a.total_units).slice(0,12);
+  renderPie('c-units-name',
+    top12UName.map(r=>r.name),
+    top12UName.map(r=>r.total_units),
+    'name', v=>fmtK(v)+' units');
 
-  renderPie('c-rev-sku',
-    top10Rev.map(r => r.sku),
-    top10Rev.map(r => r.total_revenue),
-    v => '$' + fmtRev(v));
+  // ④ Sessions bar (top) + CVR% line (bottom) — 分拆兩個 panel
+  renderSessionsBar('c-sessions-bar', months);
+  renderCvrPanel('c-cvr-line', months);
 
-  renderPie('c-units-sku',
-    top10Units.map(r => r.sku),
-    top10Units.map(r => r.total_units),
-    v => fmtK(v) + ' units');
+  // ⑤ Sessions vs Units trend
+  renderCombo('c-sessions-units', months,
+    {label:'Sessions',field:'sessions',color:'rgba(25,118,210,0.65)',yId:'y'},
+    {label:'Units Sold',field:'total_units',color:'#2E7D32',yId:'y1',yLabel:'Units'});
 
-  // Line charts
-  renderComboChart('c-sessions-cvr', months,
-    { label:'Sessions', field:'sessions', color:'rgba(25,118,210,0.65)', yId:'y' },
-    { label:'CVR%',     field:'cvr',      color:'#E65100',               yId:'y1', yLabel:'CVR%' });
+  // ⑦ Sessions by Collection — pie chart
+  const byCollS=[...byCollection].sort((a,b)=>b.sessions-a.sessions);
+  renderPie('c-sessions-coll',
+    byCollS.slice(0,12).map(r=>r.collection),
+    byCollS.slice(0,12).map(r=>r.sessions),
+    'collection', v=>fmtK(v));
 
-  renderComboChart('c-sessions-units', months,
-    { label:'Sessions',      field:'sessions',    color:'rgba(25,118,210,0.65)', yId:'y' },
-    { label:'Units Ordered', field:'total_units', color:'#2E7D32',               yId:'y1', yLabel:'Units' });
+  // ⑧ ROI / Profit by Collection
+  renderROI('c-roi-coll', byCollection);
 
-  // MoM
-  renderMoM(months);
-
-  // Detail table
+  // ⑥ Detail table
   renderTrafficTable();
+
+  // SKU Growth Analysis
+  renderGrowthAnalysis();
 }
 
-// ── Pie chart ─────────────────────────────────────────────────────────────
-function renderPie(id, labels, data, fmtFn) {
+// ── Pie chart (clickable → cross-filter, shows % labels on slices) ────────
+function renderPie(id, labels, data, filterType, fmtFn) {
   const ctx = document.getElementById(id);
-  if (!ctx) return;
-  if (tCharts[id]) tCharts[id].destroy();
-  const total = data.reduce((s,v) => s + (v||0), 0);
+  if(!ctx) return;
+  if(tCharts[id]) tCharts[id].destroy();
+  const total = data.reduce((s,v)=>s+(v||0),0);
+
+  const isActive = crossFilter.type === filterType;
+  const bgColors = labels.map((l,i) => {
+    if(isActive && crossFilter.value !== l) return BAR_COLORS[i%BAR_COLORS.length]+'55';
+    return BAR_COLORS[i%BAR_COLORS.length];
+  });
+
   tCharts[id] = new Chart(ctx, {
     type: 'pie',
-    data: {
-      labels,
-      datasets: [{
-        data,
-        backgroundColor: PIE_COLORS.slice(0, labels.length),
-        borderWidth: 1,
-      }]
-    },
+    data: { labels, datasets: [{ data, backgroundColor: bgColors, borderWidth: 2, borderColor:'#fff' }] },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      onClick: (e, els) => {
+        if(els.length>0) setCrossFilter(filterType, labels[els[0].index]);
+      },
       plugins: {
-        legend: {
-          position: 'right',
-          labels: { boxWidth: 11, font: { size: 10 }, padding: 8 }
-        },
-        tooltip: {
-          callbacks: {
-            label: ctx => {
-              const pct = total > 0
-                ? (ctx.parsed / total * 100).toFixed(1) : 0;
-              return ` ${ctx.label}: ${fmtFn ? fmtFn(ctx.parsed) : ctx.parsed} (${pct}%)`;
-            }
-          }
+        legend: { position:'right', labels:{ boxWidth:12, font:{size:10}, padding:8 } },
+        tooltip: { callbacks: { label: c => {
+          const pct = total>0 ? (c.parsed/total*100).toFixed(1) : 0;
+          return ` ${c.label}: ${fmtFn?fmtFn(c.parsed):c.parsed} (${pct}%)`;
+        }}},
+        datalabels: {
+          color: '#fff',
+          font: { weight: 'bold', size: 11 },
+          formatter: (value) => {
+            const pct = total > 0 ? (value / total * 100) : 0;
+            return pct >= 3 ? pct.toFixed(1) + '%' : '';  // 小於 3% 不顯示
+          },
+          textShadowBlur: 4,
+          textShadowColor: 'rgba(0,0,0,0.4)',
         }
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
+}
+
+// ── Horizontal bar chart (clickable → cross-filter) ───────────────────────
+function renderHBar(id, labels, data, filterType, fmtFn) {
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  if(tCharts[id]) tCharts[id].destroy();
+
+  const isActive = crossFilter.type === filterType;
+  const bgColors = labels.map((l,i) => {
+    if(isActive && crossFilter.value === l) return '#1976D2';
+    if(isActive) return 'rgba(25,118,210,0.25)';
+    return BAR_COLORS[i % BAR_COLORS.length];
+  });
+
+  tCharts[id] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: bgColors, borderRadius: 3 }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      onClick: (e, els) => {
+        if(els.length>0) setCrossFilter(filterType, labels[els[0].index]);
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ' '+((fmtFn ? fmtFn(c.parsed.x) : c.parsed.x)) } }
+      },
+      scales: {
+        x: { ticks: { font:{size:9} }, grid:{color:'rgba(0,0,0,.05)'} },
+        y: { ticks: { font:{size:9} } }
       }
     }
   });
 }
 
-// ── Combo bar+line chart ──────────────────────────────────────────────────
-function renderComboChart(id, months, bar, line) {
+// ── Sessions bar (top panel) ──────────────────────────────────────────────
+function renderSessionsBar(id, months) {
   const ctx = document.getElementById(id);
-  if (!ctx) return;
-  if (tCharts[id]) tCharts[id].destroy();
+  if(!ctx) return;
+  if(tCharts[id]) tCharts[id].destroy();
   tCharts[id] = new Chart(ctx, {
+    type: 'bar',
     data: {
-      labels: months.map(r => r.month),
+      labels: months.map(r=>r.month),
+      datasets: [{
+        label: 'Sessions',
+        data: months.map(r=>r.sessions||0),
+        backgroundColor: 'rgba(25,118,210,0.6)',
+        borderRadius: 3,
+        datalabels: { display: false }
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        datalabels: { display: false },
+        tooltip: { callbacks: { label: c => ` Sessions: ${c.parsed.y.toLocaleString()}` } }
+      },
+      scales: {
+        x: { ticks: { display: false }, grid: { display: false } },
+        y: { ticks: { font:{size:9} }, title: { display:true, text:'Sessions', font:{size:9} } }
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
+}
+
+// ── CVR% line with avg reference + color fill (bottom panel) ─────────────
+function renderCvrPanel(id, months) {
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  if(tCharts[id]) tCharts[id].destroy();
+
+  const cvrData = months.map(r => parseFloat(r.cvr||0));
+  const avg     = cvrData.length ? cvrData.reduce((s,v)=>s+v,0)/cvrData.length : 0;
+
+  // Smart max: 90th percentile × 1.4, min 10
+  const sorted  = [...cvrData].filter(v=>v>0).sort((a,b)=>a-b);
+  const p90     = sorted.length ? sorted[Math.floor(sorted.length*0.9)] : 20;
+  const yMax    = Math.max(10, Math.ceil(p90 * 1.4));
+
+  // Color each point: green if above avg, orange if below
+  const pointColors = cvrData.map(v => v >= avg ? '#2E7D32' : '#E65100');
+
+  tCharts[id] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: months.map(r=>r.month),
       datasets: [
         {
-          type: 'bar',
-          label: bar.label,
-          data: months.map(r => r[bar.field] || 0),
-          backgroundColor: bar.color,
-          yAxisID: bar.yId,
-          order: 2,
+          label: 'CVR%',
+          data: cvrData,
+          borderColor: '#1976D2',
+          backgroundColor: 'rgba(25,118,210,0.08)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointBackgroundColor: pointColors,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          datalabels: {
+            display: true,
+            align: 'top',
+            anchor: 'end',
+            color: ctx2 => cvrData[ctx2.dataIndex] >= avg ? '#2E7D32' : '#E65100',
+            font: { size: 9, weight: 'bold' },
+            formatter: v => v > 0 ? v.toFixed(1)+'%' : '',
+          }
         },
         {
-          type: 'line',
-          label: line.label,
-          data: months.map(r => r[line.field] || 0),
+          // Average reference line
+          label: `Avg ${avg.toFixed(1)}%`,
+          data: months.map(() => parseFloat(avg.toFixed(2))),
+          borderColor: 'rgba(0,0,0,0.25)',
+          borderWidth: 1.5,
+          borderDash: [5,4],
+          pointRadius: 0,
+          fill: false,
+          datalabels: { display: false }
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { labels: { font:{size:9}, boxWidth:10 } },
+        tooltip: { callbacks: { label: c => c.datasetIndex===0
+          ? ` CVR: ${c.parsed.y.toFixed(2)}% (avg ${avg.toFixed(1)}%)`
+          : ` Avg: ${avg.toFixed(1)}%`
+        }},
+        datalabels: {}
+      },
+      scales: {
+        x: { ticks:{ font:{size:9} } },
+        y: {
+          min: 0, suggestedMax: yMax,
+          ticks: { font:{size:9}, callback: v=>v+'%' },
+          title: { display:true, text:'CVR%', font:{size:9} }
+        }
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
+}
+
+// ── Combo bar+line trend chart ────────────────────────────────────────────
+function renderCombo(id, months, bar, line) {
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  if(tCharts[id]) tCharts[id].destroy();
+
+  const lineData  = months.map(r => r[line.field] || 0);
+  const hasMaxY1  = line.maxY1 != null;
+
+  tCharts[id] = new Chart(ctx, {
+    data: {
+      labels: months.map(r=>r.month),
+      datasets: [
+        {
+          type:'bar', label:bar.label,
+          data: months.map(r=>r[bar.field]||0),
+          backgroundColor:bar.color, yAxisID:bar.yId, order:2,
+          borderRadius: 3,
+        },
+        {
+          type:'line', label:line.label,
+          data: lineData,
           borderColor: line.color,
-          backgroundColor: line.color.replace(')', ',0.1)').replace('rgb','rgba'),
+          backgroundColor: 'transparent',
           yAxisID: line.yId,
-          tension: 0.3,
-          pointRadius: 4,
-          pointHoverRadius: 6,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointBackgroundColor: line.color,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
           order: 1,
+          datalabels: {
+            align: 'top',
+            anchor: 'end',
+            color: line.color,
+            font: { size: 9, weight: 'bold' },
+            formatter: v => v > 0 ? (line.yLabel==='CVR%' ? v.toFixed(1)+'%' : v.toLocaleString()) : '',
+          }
         }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
+      interaction: { mode:'index', intersect:false },
       scales: {
-        x:  { ticks: { font: { size: 9 } } },
-        y:  { type: 'linear', position: 'left',
-              title: { display: true, text: bar.label,  font: { size: 9 } },
-              ticks: { font: { size: 9 } } },
-        y1: { type: 'linear', position: 'right',
-              grid: { drawOnChartArea: false },
-              title: { display: true, text: line.yLabel || line.label, font: { size: 9 } },
-              ticks: { font: { size: 9 } } },
+        x:  { ticks:{ font:{size:9} } },
+        y:  { position:'left',
+              title:{ display:true, text:bar.label, font:{size:9} },
+              ticks:{ font:{size:9} } },
+        y1: { position:'right',
+              grid:{ drawOnChartArea:false },
+              min: 0,
+              ...(hasMaxY1 ? { suggestedMax: line.maxY1 } : {}),
+              title:{ display:true, text:line.yLabel||line.label, font:{size:9} },
+              ticks:{
+                font:{ size:9 },
+                callback: v => line.yLabel==='CVR%' ? v+'%' : v,
+              }
+            }
       },
-      plugins: { legend: { labels: { font: { size: 10 } } } }
+      plugins: {
+        legend: { labels:{ font:{size:10} } },
+        datalabels: { display: false },  // disable global, enable per-dataset
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
+}
+
+// ── ⑧ ROI / Profit bar chart ─────────────────────────────────────────────
+function renderROI(id, byCollection) {
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  if(tCharts[id]) tCharts[id].destroy();
+  const sorted = [...byCollection].filter(r=>r.total_revenue>0)
+    .sort((a,b)=>b.profit-a.profit);
+  tCharts[id] = new Chart(ctx, {
+    type:'bar',
+    data: {
+      labels: sorted.map(r=>r.collection),
+      datasets: [
+        { label:'Revenue', data:sorted.map(r=>r.total_revenue),
+          backgroundColor:'rgba(25,118,210,0.5)', stack:'s', borderRadius:2 },
+        { label:'COG + FBA', data:sorted.map(r=>-(r.total_var_cost||r.total_cost||0)),
+          backgroundColor:'rgba(198,40,40,0.55)', stack:'s', borderRadius:2 },
+        { label:'Referral 15%', data:sorted.map(r=>-(r.total_revenue*0.15)),
+          backgroundColor:'rgba(230,81,0,0.55)', stack:'s', borderRadius:2 },
+        { type:'line', label:'Margin%', data:sorted.map(r=>r.margin),
+          borderColor:'#2E7D32', backgroundColor:'transparent',
+          yAxisID:'y1', tension:0.3, pointRadius:4, order:0 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      scales: {
+        x:  {ticks:{font:{size:9}}},
+        y:  {stacked:true, title:{display:true,text:'USD',font:{size:9}}, ticks:{font:{size:9}}},
+        y1: {position:'right', grid:{drawOnChartArea:false},
+             title:{display:true,text:'Margin%',font:{size:9}}, ticks:{font:{size:9},callback:v=>v+'%'}}
+      },
+      plugins: {
+        legend:{labels:{font:{size:10}}},
+        tooltip:{callbacks:{label:c=>{
+          if(c.dataset.label==='Margin%') return ` Margin: ${c.parsed.y}%`;
+          return ` ${c.dataset.label}: $${fmtRev(Math.abs(c.parsed.y))}`;
+        }}}
+      }
     }
   });
 }
 
-// ── MoM comparison ────────────────────────────────────────────────────────
-function renderMoM(months) {
-  const el = document.getElementById('t-mom');
-  if (!el || months.length < 2) {
-    if (el) el.innerHTML = '<div style="color:var(--text3);font-size:11px;padding:8px">資料不足兩個月</div>';
-    return;
-  }
-  const prev = months[months.length - 2];
-  const cur  = months[months.length - 1];
+// ── ⑥ Detail table (sortable) ────────────────────────────────────────────
+const T_COLS = [
+  { key:'product_name', label:'Name',           align:'left',   type:'str' },
+  { key:'child_asin',   label:'Child ASIN',     align:'center', type:'str' },
+  { key:'collection',   label:'Collection',     align:'left',   type:'str' },
+  { key:'month',        label:'月份',           align:'center', type:'str' },
+  { key:'sessions',     label:'Sessions',       align:'right',  type:'num' },
+  { key:'cvr',          label:'AVG CVR%',       align:'right',  type:'num' },
+  { key:'msrp',         label:'AVG ASP',        align:'right',  type:'num' },
+  { key:'revenue',      label:'Total Sales',    align:'right',  type:'num' },
+  { key:'units',        label:'Units Sold',     align:'right',  type:'num' },
+  { key:'cog',          label:'COG/unit',       align:'right',  type:'num' },
+  { key:'_total_cog',   label:'Total COG',      align:'right',  type:'num' },
+  { key:'_total_fba',   label:'Total FBA Fee',  align:'right',  type:'num' },
+  { key:'_referral',    label:'Total Referral', align:'right',  type:'num' },
+  { key:'_profit',      label:'Profit',         align:'right',  type:'num' },
+];
+let tSortKey = 'revenue', tSortAsc = false;
 
-  const delta = (field) => {
-    const p = parseFloat(prev[field]) || 0;
-    const c = parseFloat(cur[field])  || 0;
-    if (p === 0) return c > 0 ? '+∞' : '—';
-    const pct = ((c - p) / Math.abs(p) * 100).toFixed(1);
-    return (pct > 0 ? '+' : '') + pct + '%';
-  };
-  const dcls = (field) => {
-    const p = parseFloat(prev[field]) || 0;
-    const c = parseFloat(cur[field])  || 0;
-    return c >= p ? 'delta-up' : 'delta-dn';
-  };
-
-  const fmt$ = v => '$' + (parseFloat(v)||0)
-    .toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
-
-  el.innerHTML = `
-    <div class="mom-card">
-      <h4>🗓 ${prev.month}</h4>
-      <div class="mom-row"><span class="mom-lbl">Sessions</span>
-        <span class="mom-val">${(prev.sessions||0).toLocaleString()}</span></div>
-      <div class="mom-row"><span class="mom-lbl">CVR%</span>
-        <span class="mom-val">${parseFloat(prev.cvr||0).toFixed(2)}%</span></div>
-      <div class="mom-row"><span class="mom-lbl">Units</span>
-        <span class="mom-val">${(prev.total_units||0).toLocaleString()}</span></div>
-      <div class="mom-row"><span class="mom-lbl">Revenue</span>
-        <span class="mom-val">${fmt$(prev.total_revenue)}</span></div>
-    </div>
-    <div class="mom-card">
-      <h4>🗓 ${cur.month}</h4>
-      <div class="mom-row"><span class="mom-lbl">Sessions</span>
-        <span class="mom-val">${(cur.sessions||0).toLocaleString()}</span></div>
-      <div class="mom-row"><span class="mom-lbl">CVR%</span>
-        <span class="mom-val">${parseFloat(cur.cvr||0).toFixed(2)}%</span></div>
-      <div class="mom-row"><span class="mom-lbl">Units</span>
-        <span class="mom-val">${(cur.total_units||0).toLocaleString()}</span></div>
-      <div class="mom-row"><span class="mom-lbl">Revenue</span>
-        <span class="mom-val">${fmt$(cur.total_revenue)}</span></div>
-    </div>
-    <div class="mom-card">
-      <h4>📊 MoM 變化（${prev.month} → ${cur.month}）</h4>
-      <div class="mom-row"><span class="mom-lbl">Sessions</span>
-        <span class="mom-val ${dcls('sessions')}">${delta('sessions')}</span></div>
-      <div class="mom-row"><span class="mom-lbl">CVR%</span>
-        <span class="mom-val ${dcls('cvr')}">${delta('cvr')}</span></div>
-      <div class="mom-row"><span class="mom-lbl">Units</span>
-        <span class="mom-val ${dcls('total_units')}">${delta('total_units')}</span></div>
-      <div class="mom-row"><span class="mom-lbl">Revenue</span>
-        <span class="mom-val ${dcls('total_revenue')}">${delta('total_revenue')}</span></div>
-    </div>`;
+function _buildTableHeader() {
+  document.getElementById('t-tbl-hdr').innerHTML = T_COLS.map(col => {
+    const arrow = tSortKey===col.key ? (tSortAsc?' ↑':' ↓') : '';
+    const bg = col.key==='_profit' ? '#1B5E20' :
+               col.key.startsWith('_total')||col.key==='cog' ? '#37474F' : '#37474F';
+    return `<th onclick="sortTrafficTable('${col.key}')"
+      style="background:${bg};color:#fff;padding:7px 8px;white-space:nowrap;
+             font-size:10px;cursor:pointer;user-select:none;text-align:${col.align}">
+      ${col.label}${arrow}</th>`;
+  }).join('');
 }
 
-// ── Detail table ──────────────────────────────────────────────────────────
-function renderTrafficTable() {
-  if (!trafficRaw) return;
-  const month = document.getElementById('t-month-sel')?.value || '';
-  const q     = (document.getElementById('t-search')?.value || '').toLowerCase();
+function sortTrafficTable(key) {
+  if(tSortKey===key) tSortAsc=!tSortAsc;
+  else { tSortKey=key; tSortAsc=(key==='product_name'||key==='collection'||key==='month'); }
+  renderTrafficTable();
+}
 
-  let rows = trafficRaw.detail.filter(r => {
-    if (month && r.month !== month) return false;
-    if (q && !(r.sku||'').toLowerCase().includes(q) &&
-             !(r.collection||'').toLowerCase().includes(q) &&
-             !(r.product_name||'').toLowerCase().includes(q)) return false;
+function renderTrafficTable() {
+  if(!trafficRaw) return;
+  _buildTableHeader();
+
+  const month    = document.getElementById('t-month-sel')?.value||'';
+  const q        = (document.getElementById('t-search')?.value||'').toLowerCase();
+  const from     = document.getElementById('t-from')?.value||'';
+  const to       = document.getElementById('t-to')?.value||'';
+  const selColls = _getSelectedColls();
+
+  let rows = trafficRaw.detail.filter(r=>{
+    if(from && r.month<from) return false;
+    if(to   && r.month>to)   return false;
+    if(month && r.month!==month) return false;
+    if(selColls.length>0 && !selColls.includes(r.collection)) return false;
+    if(crossFilter.type==='collection' && r.collection!==crossFilter.value) return false;
+    if(crossFilter.type==='name' && r.product_name!==crossFilter.value) return false;
+    if(q && !(r.product_name||'').toLowerCase().includes(q) &&
+            !(r.child_asin||'').toLowerCase().includes(q) &&
+            !(r.sku||'').toLowerCase().includes(q) &&
+            !(r.collection||'').toLowerCase().includes(q)) return false;
+    return true;
+  }).map(r => {
+    const _total_cog = (r.units||0)*(r.cog||0);
+    const _total_fba = (r.units||0)*(r.fba_fee||0);
+    const _referral  = (r.revenue||0)*0.15;
+    const _profit    = (r.revenue||0) - _total_cog - _total_fba - _referral;
+    return {...r, _total_cog, _total_fba, _referral, _profit};
+  });
+
+  // Sort
+  const col = T_COLS.find(c=>c.key===tSortKey);
+  rows.sort((a,b)=>{
+    const va=a[tSortKey]??'', vb=b[tSortKey]??'';
+    if(col?.type==='str') return tSortAsc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+    return tSortAsc ? (va-vb) : (vb-va);
+  });
+
+  document.getElementById('t-row-count').textContent = rows.length+' 筆';
+  const f$ = v => '$'+(parseFloat(v)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  document.getElementById('t-tbody').innerHTML = rows.length
+    ? rows.map(r=>{
+        const isSelected = crossFilter.type==='name' && crossFilter.value===r.product_name;
+        const name_esc   = (r.product_name||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+        return `<tr class="${isSelected?'t-selected':''}"
+            onclick="setCrossFilter('name','${name_esc}')"
+            title="點擊篩選：${name_esc}">
+          <td class="name-cell" title="${name_esc}">${r.product_name||'—'}</td>
+          <td class="num" style="font-size:10px">${r.child_asin||''}</td>
+          <td class="left">${r.collection||''}</td>
+          <td class="num">${r.month}</td>
+          <td class="num">${(r.sessions||0).toLocaleString()}</td>
+          <td class="num">${parseFloat(r.cvr||0).toFixed(2)}%</td>
+          <td class="num">${f$(r.msrp||0)}</td>
+          <td class="num hi-green">${f$(r.revenue||0)}</td>
+          <td class="num">${(r.units||0).toLocaleString()}</td>
+          <td class="num">${r.cog>0?f$(r.cog):'—'}</td>
+          <td class="num">${f$(r._total_cog)}</td>
+          <td class="num">${r._total_fba>0?f$(r._total_fba):'—'}</td>
+          <td class="num">${f$(r._referral)}</td>
+          <td class="num ${r._profit>=0?'hi-green':'cov-danger'}">${f$(r._profit)}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="14" class="empty">無符合資料</td></tr>';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ★ A: Monthly Revenue & Profit P&L (stacked bar + Margin% line)
+// ════════════════════════════════════════════════════════════════════════════
+
+function renderMonthlyPL(months) {
+  const ctx = document.getElementById('c-monthly-pl');
+  if (!ctx) return;
+  if (tCharts['c-monthly-pl']) tCharts['c-monthly-pl'].destroy();
+
+  const labels   = months.map(r => r.month);
+  const revenues = months.map(r => r.total_revenue);
+  const profits  = months.map(r => Math.max(r.profit, 0));   // ≥0 only for stacking
+  const costs    = months.map(r => r.total_cost);
+  const margins  = months.map(r => r.margin);
+  const hasCost  = costs.some(v => v > 0);  // false if COG/FBA not filled
+
+  // Smart Y max: p90 × 1.3
+  const sorted = [...revenues].sort((a,b)=>a-b);
+  const p90    = sorted[Math.floor(sorted.length * 0.9)] || 1;
+  const yMax   = Math.ceil(p90 * 1.3);
+
+  const avgMargin = margins.length ? margins.reduce((s,v)=>s+v,0)/margins.length : 0;
+
+  tCharts['c-monthly-pl'] = new Chart(ctx, {
+    data: {
+      labels,
+      datasets: [
+        // Stacked: Cost (red-ish)
+        ...(hasCost ? [{
+          type: 'bar', label: 'Cost（COG+FBA+Referral）',
+          data: costs,
+          backgroundColor: 'rgba(198,40,40,0.5)',
+          stack: 'pl', order: 2,
+          borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 3, bottomRight: 3 },
+          datalabels: { display: false },
+        }] : []),
+        // Stacked: Profit (green) — or full Revenue if no cost data
+        {
+          type: 'bar', label: hasCost ? 'Profit' : 'Revenue',
+          data: hasCost ? profits : revenues,
+          backgroundColor: hasCost ? 'rgba(46,125,50,0.7)' : 'rgba(78,121,167,0.65)',
+          stack: 'pl', order: 2,
+          borderRadius: { topLeft: 3, topRight: 3, bottomLeft: 0, bottomRight: 0 },
+          datalabels: {
+            display: true, anchor: 'end', align: 'top',
+            color: '#555', font: { size: 9 },
+            formatter: v => v > 0 ? '$' + fmtRev(v) : '',
+          },
+        },
+        // Margin% line (right axis)
+        ...(hasCost ? [{
+          type: 'line', label: 'Margin%',
+          data: margins,
+          borderColor: '#F28E2B', backgroundColor: 'transparent',
+          yAxisID: 'y1', tension: 0.35, borderWidth: 2.5,
+          pointRadius: 5, pointHoverRadius: 7,
+          pointBackgroundColor: margins.map(v => v >= avgMargin ? '#2E7D32' : '#E65100'),
+          pointBorderColor: '#fff', pointBorderWidth: 2,
+          order: 1,
+          datalabels: {
+            display: true, align: 'top', anchor: 'end',
+            color: ctx2 => margins[ctx2.dataIndex] >= avgMargin ? '#2E7D32' : '#E65100',
+            font: { size: 9, weight: 'bold' },
+            formatter: v => v.toFixed(1) + '%',
+          },
+        }] : []),
+        // Avg Margin reference line
+        ...(hasCost ? [{
+          type: 'line', label: `Avg Margin ${avgMargin.toFixed(1)}%`,
+          data: labels.map(() => parseFloat(avgMargin.toFixed(2))),
+          borderColor: 'rgba(0,0,0,0.2)', borderWidth: 1.5, borderDash: [5,4],
+          pointRadius: 0, yAxisID: 'y1', fill: false,
+          datalabels: { display: false },
+        }] : []),
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x:  { ticks: { font: { size: 9 } }, stacked: true },
+        y:  { stacked: true, suggestedMax: yMax,
+              ticks: { font: { size: 9 }, callback: v => '$' + fmtRev(v) },
+              title: { display: true, text: 'USD', font: { size: 9 } } },
+        ...(hasCost ? { y1: {
+          position: 'right', grid: { drawOnChartArea: false },
+          ticks: { font: { size: 9 }, callback: v => v + '%' },
+          title: { display: true, text: 'Margin%', font: { size: 9 } },
+        }} : {}),
+      },
+      plugins: {
+        legend: { labels: { font: { size: 10 } } },
+        tooltip: { callbacks: { label: c => {
+          if (c.dataset.label === 'Margin%')
+            return ` Margin: ${c.parsed.y.toFixed(1)}% (avg ${avgMargin.toFixed(1)}%)`;
+          if (c.dataset.label?.startsWith('Avg'))
+            return ` Avg Margin: ${avgMargin.toFixed(1)}%`;
+          return ` ${c.dataset.label}: $${fmtRev(Math.abs(c.parsed.y))}`;
+        }}},
+        datalabels: {},
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
+
+  // Note if cost data is missing
+  if (!hasCost) {
+    const card = ctx.closest('.chart-card');
+    if (card && !card.querySelector('.pl-note')) {
+      const note = document.createElement('div');
+      note.className = 'pl-note';
+      note.style.cssText = 'font-size:10px;color:var(--orange);margin-top:6px';
+      note.textContent = '⚠️ product_catalog 尚未填入 COG / FBA fee，目前僅顯示 Revenue（無法拆分利潤）';
+      card.appendChild(note);
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ★ B: MoM Growth Strip
+// ════════════════════════════════════════════════════════════════════════════
+
+function _populateMoMSel(months) {
+  const sel = document.getElementById('mom-month-sel');
+  if (!sel) return;
+  // Latest month as default (skip oldest since it has no prev)
+  const opts = months.slice(1).reverse(); // newest first, need at least 1 prev
+  sel.innerHTML = opts.map(r =>
+    `<option value="${r.month}">${r.month}</option>`
+  ).join('');
+}
+
+function renderMoMStrip() {
+  const sel     = document.getElementById('mom-month-sel');
+  const strip   = document.getElementById('mom-strip');
+  if (!sel || !strip || !tFiltered) return;
+
+  const month   = sel.value;
+  const months  = tFiltered.months;
+  const idx     = months.findIndex(r => r.month === month);
+  if (idx < 1) { strip.innerHTML = '<div style="color:var(--text3);font-size:11px">無前期資料</div>'; return; }
+
+  const curr = months[idx];
+  const prev = months[idx - 1];
+
+  const pct = (c, p) => p > 0 ? ((c - p) / p * 100) : (c > 0 ? 100 : 0);
+
+  const METRICS = [
+    { label: 'Revenue',  curr: curr.total_revenue, prev: prev.total_revenue,
+      fmt: v => '$' + fmtRev(v), delta: pct(curr.total_revenue, prev.total_revenue) },
+    { label: 'Profit',   curr: curr.profit,         prev: prev.profit,
+      fmt: v => '$' + fmtRev(v), delta: pct(curr.profit, prev.profit),
+      dim: curr.total_cost === 0 },
+    { label: 'Units',    curr: curr.total_units,    prev: prev.total_units,
+      fmt: v => fmtK(v),         delta: pct(curr.total_units, prev.total_units) },
+    { label: 'CVR%',     curr: curr.cvr,            prev: prev.cvr,
+      fmt: v => v.toFixed(2)+'%', delta: pct(curr.cvr, prev.cvr) },
+    { label: 'Sessions', curr: curr.sessions,       prev: prev.sessions,
+      fmt: v => fmtK(v),         delta: pct(curr.sessions, prev.sessions) },
+  ];
+
+  strip.innerHTML = METRICS.map(m => {
+    const d   = m.delta;
+    const pos = d >= 0;
+    const col = m.dim ? '#aaa' : (pos ? '#2E7D32' : '#C62828');
+    const arr = pos ? '▲' : '▼';
+    const bg  = m.dim ? '#F5F5F5' : (pos ? '#EEF7ED' : '#FDEEED');
+    const bdr = m.dim ? '#E0E0E0' : (pos ? '#A5D6A7' : '#EF9A9A');
+    return `
+      <div style="background:${bg};border:1px solid ${bdr};border-radius:8px;padding:12px 14px;text-align:center">
+        <div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">${m.label}</div>
+        <div style="font-size:18px;font-weight:700;color:#1F2D3D;margin-bottom:4px">${m.dim ? '—' : m.fmt(m.curr)}</div>
+        <div style="font-size:13px;font-weight:700;color:${col}">${m.dim ? '需填 COG' : arr+' '+Math.abs(d).toFixed(1)+'%'}</div>
+        <div style="font-size:9px;color:#aaa;margin-top:3px">前期 ${m.dim ? '—' : m.fmt(m.prev)}</div>
+      </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SKU GROWTH ANALYSIS — renderGrowthAnalysis + helpers
+// ════════════════════════════════════════════════════════════════════════════
+
+function renderGrowthAnalysis() {
+  if (!trafficRaw) return;
+
+  const periodN  = parseInt(document.getElementById('g-period')?.value || '3');
+  const selColls = _getSelectedColls();
+
+  // Source: raw detail filtered by collection + cross-filter only (ignore date range)
+  const srcDetail = trafficRaw.detail.filter(r => {
+    if (selColls.length > 0 && !selColls.includes(r.collection)) return false;
+    if (crossFilter.type === 'collection' && r.collection   !== crossFilter.value) return false;
+    if (crossFilter.type === 'name'       && r.product_name !== crossFilter.value) return false;
     return true;
   });
 
-  document.getElementById('t-row-count').textContent = rows.length + ' 筆';
-  document.getElementById('t-tbody').innerHTML = rows.length
-    ? rows.map(r => `<tr>
-        <td class="num">${r.month}</td>
-        <td class="sku">${r.sku||''}</td>
-        <td class="left">${r.collection||''}</td>
-        <td class="name-cell" title="${(r.product_name||'').replace(/"/g,'&quot;')}">${r.product_name||''}</td>
-        <td class="num">${(r.sessions||0).toLocaleString()}</td>
-        <td class="num">${(r.page_views||0).toLocaleString()}</td>
-        <td class="num">${parseFloat(r.cvr||0).toFixed(2)}%</td>
-        <td class="num">${(r.units||0).toLocaleString()}</td>
-        <td class="num hi-green">$${parseFloat(r.revenue||0)
-          .toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="9" class="empty">無符合資料</td></tr>';
+  // All available months sorted oldest → newest
+  const allMonths = [...new Set(trafficRaw.detail.map(r => r.month))].sort();
+  const total     = allMonths.length;
+
+  if (total < 2) {
+    document.getElementById('g-period-label').textContent = '資料不足';
+    _clearGrowthCharts();
+    return;
+  }
+
+  // Determine current / previous windows
+  let currMonths, prevMonths;
+  if (periodN === 1) {
+    currMonths = [allMonths[total - 1]];
+    prevMonths = [allMonths[total - 2]];
+  } else {
+    const n    = Math.min(periodN, Math.floor(total / 2));
+    currMonths = allMonths.slice(total - n);
+    prevMonths = allMonths.slice(total - n * 2, total - n);
+  }
+
+  if (!prevMonths.length) {
+    document.getElementById('g-period-label').textContent = '歷史資料不足以比較';
+    return;
+  }
+
+  // Period label
+  const fmt = ms => ms.length === 1 ? ms[0] : `${ms[0]} ~ ${ms[ms.length - 1]}`;
+  document.getElementById('g-period-label').textContent =
+    `${fmt(prevMonths)}  →  ${fmt(currMonths)}`;
+
+  // Aggregate sessions / units / revenue by product_name for a set of months
+  function agg(months) {
+    const map = {};
+    srcDetail.filter(r => months.includes(r.month)).forEach(r => {
+      const key = r.product_name || r.sku || '—';
+      if (!map[key]) map[key] = { name: key, collection: r.collection, sessions: 0, units: 0, revenue: 0 };
+      map[key].sessions += r.sessions || 0;
+      map[key].units    += r.units    || 0;
+      map[key].revenue  += r.revenue  || 0;
+    });
+    // CVR = period total units ÷ period total sessions (more accurate than avg of monthly CVR)
+    Object.values(map).forEach(p => {
+      p.cvr = p.sessions > 0 ? p.units / p.sessions * 100 : 0;
+    });
+    return map;
+  }
+
+  const curr = agg(currMonths);
+  const prev = agg(prevMonths);
+
+  // % change: prev=0 and curr>0 → treat as +100% (new product); both 0 → 0
+  const pct = (c, p) => p > 0 ? Math.round((c - p) / p * 1000) / 10 : (c > 0 ? 100 : 0);
+
+  const rows = Object.keys(curr).map(name => {
+    const c = curr[name];
+    const p = prev[name] || { sessions: 0, units: 0, revenue: 0, cvr: 0 };
+    return {
+      name,
+      collection:    c.collection,
+      curr_sessions: c.sessions, prev_sessions: p.sessions, d_sessions: pct(c.sessions, p.sessions),
+      curr_cvr:      c.cvr,     prev_cvr:      p.cvr,      d_cvr:      pct(c.cvr,      p.cvr),
+      curr_revenue:  c.revenue,  prev_revenue:  p.revenue,  d_revenue:  pct(c.revenue,  p.revenue),
+      curr_units:    c.units,    prev_units:    p.units,    d_units:    pct(c.units,    p.units),
+    };
+  }).sort((a, b) => b.curr_revenue - a.curr_revenue);
+
+  _renderQuadrant(rows);
+  _renderGrowthLegend(rows);
+  _renderGrowthTable(rows);
 }
 
-// ── Formatting helpers ────────────────────────────────────────────────────
+function _clearGrowthCharts() {
+  if (tCharts['c-quadrant']) { tCharts['c-quadrant'].destroy(); delete tCharts['c-quadrant']; }
+  document.getElementById('g-legend').innerHTML = '';
+  document.getElementById('g-tbody').innerHTML =
+    '<tr><td colspan="11" class="empty">資料不足</td></tr>';
+}
+
+// ── ① Quadrant bubble chart ───────────────────────────────────────────────
+function _renderQuadrant(rows) {
+  const ctx = document.getElementById('c-quadrant');
+  if (!ctx) return;
+  if (tCharts['c-quadrant']) tCharts['c-quadrant'].destroy();
+
+  const Q_COLOR = {
+    growth:    '#59A14F',
+    efficient: '#4E79A7',
+    exposure:  '#F28E2B',
+    risk:      '#E15759',
+  };
+  const qKey = r => {
+    if (r.d_sessions >= 0 && r.d_cvr >= 0) return 'growth';
+    if (r.d_sessions <  0 && r.d_cvr >= 0) return 'efficient';
+    if (r.d_sessions >= 0 && r.d_cvr <  0) return 'exposure';
+    return 'risk';
+  };
+
+  const maxRev = Math.max(...rows.map(r => r.curr_revenue), 1);
+
+  const bubbles = rows.map(r => ({
+    x:  r.d_sessions,
+    y:  r.d_cvr,
+    r:  Math.max(5, Math.sqrt(r.curr_revenue / maxRev) * 28),
+    _r: r,
+  }));
+
+  tCharts['c-quadrant'] = new Chart(ctx, {
+    type: 'bubble',
+    data: {
+      datasets: [{
+        data:            bubbles,
+        backgroundColor: bubbles.map(b => Q_COLOR[qKey(b._r)] + 'AA'),
+        borderColor:     bubbles.map(b => Q_COLOR[qKey(b._r)]),
+        borderWidth: 1.5,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        datalabels: { display: false },
+        tooltip: {
+          callbacks: {
+            label: c => {
+              const r = c.raw._r;
+              const d = (v, isRev) => {
+                const sign = v >= 0 ? '+' : '';
+                return isRev
+                  ? sign + '$' + fmtRev(Math.abs(v))
+                  : sign + v.toFixed(1) + '%';
+              };
+              return [
+                ` ${r.name}`,
+                ` Sessions: ${r.curr_sessions.toLocaleString()}  (${d(r.d_sessions)})`,
+                ` CVR: ${r.curr_cvr.toFixed(2)}%  (${d(r.d_cvr)})`,
+                ` Revenue: $${fmtRev(r.curr_revenue)}  (${d(r.d_revenue)})`,
+                ` Units: ${r.curr_units.toLocaleString()}  (${d(r.d_units)})`,
+              ];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Sessions 變化%', font: { size: 10 } },
+          ticks: { font: { size: 9 }, callback: v => v + '%' },
+          grid: {
+            color:     ctx2 => ctx2.tick.value === 0 ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.06)',
+            lineWidth: ctx2 => ctx2.tick.value === 0 ? 2 : 1,
+          },
+        },
+        y: {
+          title: { display: true, text: 'CVR 變化%', font: { size: 10 } },
+          ticks: { font: { size: 9 }, callback: v => v + '%' },
+          grid: {
+            color:     ctx2 => ctx2.tick.value === 0 ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.06)',
+            lineWidth: ctx2 => ctx2.tick.value === 0 ? 2 : 1,
+          },
+        },
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
+}
+
+// ── ② Quadrant legend cards ───────────────────────────────────────────────
+function _renderGrowthLegend(rows) {
+  const QUADRANTS = [
+    { key: 'growth',    emoji: '🚀', label: '全面成長', desc: 'Sessions↑ + CVR↑', color: '#59A14F', bg: '#EEF7ED' },
+    { key: 'efficient', emoji: '💪', label: '效率提升', desc: 'Sessions↓ + CVR↑', color: '#4E79A7', bg: '#EBF3FA' },
+    { key: 'exposure',  emoji: '📈', label: '曝光擴張', desc: 'Sessions↑ + CVR↓', color: '#F28E2B', bg: '#FEF6ED' },
+    { key: 'risk',      emoji: '⚠️', label: '需要關注', desc: 'Sessions↓ + CVR↓', color: '#E15759', bg: '#FDEEED' },
+  ];
+  const qKey = r => {
+    if (r.d_sessions >= 0 && r.d_cvr >= 0) return 'growth';
+    if (r.d_sessions <  0 && r.d_cvr >= 0) return 'efficient';
+    if (r.d_sessions >= 0 && r.d_cvr <  0) return 'exposure';
+    return 'risk';
+  };
+
+  const grouped = { growth: [], efficient: [], exposure: [], risk: [] };
+  rows.forEach(r => grouped[qKey(r)].push(r));
+
+  document.getElementById('g-legend').innerHTML = QUADRANTS.map(q => {
+    const items = grouped[q.key];
+    return `
+      <div style="background:${q.bg};border:1px solid ${q.color}44;border-radius:8px;padding:12px 14px">
+        <div style="font-size:12px;font-weight:700;color:${q.color};margin-bottom:3px">
+          ${q.emoji} ${q.label}
+          <span style="font-size:10px;font-weight:400;color:#888;margin-left:4px">${items.length} 個產品</span>
+        </div>
+        <div style="font-size:10px;color:#888;margin-bottom:8px">${q.desc}</div>
+        ${items.slice(0, 5).map(r => `
+          <div style="display:flex;justify-content:space-between;align-items:center;
+            padding:4px 0;border-bottom:1px solid ${q.color}22;font-size:10px;">
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+              color:#444;padding-right:6px" title="${r.name}">${r.name}</span>
+            <span style="font-weight:700;color:${q.color};white-space:nowrap">
+              $${fmtRev(r.curr_revenue)}</span>
+          </div>`).join('')}
+        ${items.length > 5
+          ? `<div style="font-size:10px;color:#aaa;margin-top:6px;text-align:right">
+               +${items.length - 5} 更多…</div>`
+          : ''}
+      </div>`;
+  }).join('');
+}
+
+// ── ③ Growth detail table ─────────────────────────────────────────────────
+function _renderGrowthTable(rows) {
+  _growthRows    = rows;
+  _growthSortKey = 'curr_revenue';
+  _growthSortAsc = false;
+  const colls = [...new Set(rows.map(r => r.collection).filter(Boolean))].sort();
+  _buildGrowthSortHeader();
+  _buildGrowthFilterRow(colls);
+  _applyGrowthFilter();
+}
+
+// Sortable header row (rebuilt on sort change)
+function _buildGrowthSortHeader() {
+  const hdr = document.getElementById('g-tbl-hdr');
+  if (!hdr) return;
+  hdr.innerHTML = _G_COLS.map(c => {
+    const active = _growthSortKey === c.key;
+    const arr    = active ? (_growthSortAsc ? ' ↑' : ' ↓') : '';
+    return `<th onclick="_sortGrowthTable('${c.key}')"
+      style="background:${c.bg};color:#fff;padding:7px 8px;font-size:10px;
+      font-weight:600;letter-spacing:.03em;text-align:${c.align};white-space:nowrap;
+      cursor:pointer;user-select:none;transition:filter .15s;
+      ${active ? 'filter:brightness(1.25)' : ''}"
+      title="點擊排序">
+      ${c.label}${arr}</th>`;
+  }).join('');
+}
+
+// Filter sub-row — built once per data refresh, stays sticky below header
+function _buildGrowthFilterRow(colls) {
+  const fr = document.getElementById('g-tbl-filter');
+  if (!fr) return;
+  const bg  = 'background:#1A2D40;padding:4px 5px;';
+  const st  = 'width:100%;font-size:10px;padding:3px 4px;border:1px solid rgba(255,255,255,.2);' +
+              'border-radius:3px;background:rgba(255,255,255,.08);color:#fff;outline:none;font-family:inherit;';
+  const dir = `<option value="">全部</option><option value="up">▲ 正</option><option value="dn">▼ 負</option>`;
+
+  fr.innerHTML = _G_COLS.map(c => {
+    let inner = '';
+    if (c.filter === 'text')
+      inner = `<input id="gf-${c.key}" type="text" placeholder="搜尋…" style="${st}" oninput="_applyGrowthFilter()">`;
+    else if (c.filter === 'select')
+      inner = `<select id="gf-${c.key}" style="${st}" onchange="_applyGrowthFilter()">
+        <option value="">全部</option>${colls.map(v=>`<option>${v}</option>`).join('')}</select>`;
+    else if (c.filter === 'dir')
+      inner = `<select id="gf-${c.key}" style="${st}" onchange="_applyGrowthFilter()">${dir}</select>`;
+    else if (c.filter === 'status')
+      inner = `<select id="gf-${c.key}" style="${st}" onchange="_applyGrowthFilter()">
+        <option value="">全部</option>
+        <option value="4">🚀 全面成長</option>
+        <option value="3">📈 小幅成長</option>
+        <option value="2">➡️ 持平</option>
+        <option value="1">📉 小幅衰退</option>
+        <option value="0">⚠️ 需關注</option></select>`;
+    return `<td style="${bg}">${inner}</td>`;
+  }).join('');
+}
+
+// Sort click handler — only rebuilds header row, preserves filter inputs
+function _sortGrowthTable(key) {
+  if (_growthSortKey === key) {
+    _growthSortAsc = !_growthSortAsc;
+  } else {
+    _growthSortKey = key;
+    _growthSortAsc = (key === 'name' || key === 'collection'); // text cols default asc
+  }
+  _buildGrowthSortHeader();
+  _applyGrowthFilter();
+}
+
+// Read all in-header filter controls, filter + sort, render tbody
+function _applyGrowthFilter() {
+  if (!_growthRows.length) return;
+
+  const val  = id => document.getElementById(id)?.value || '';
+  const fName   = val('gf-name').toLowerCase();
+  const fColl   = val('gf-collection');
+  const fDSess  = val('gf-d_sessions');
+  const fDCvr   = val('gf-d_cvr');
+  const fDRev   = val('gf-d_revenue');
+  const fDUnits = val('gf-d_units');
+  const fStatus = val('gf-_status');
+
+  const _score = r =>
+    (r.d_sessions >= 0 ? 1 : 0) + (r.d_cvr    >= 0 ? 1 : 0) +
+    (r.d_revenue  >= 0 ? 1 : 0) + (r.d_units   >= 0 ? 1 : 0);
+  const dir = (f, field, r) =>
+    !f || (f === 'up' ? r[field] >= 0 : r[field] < 0);
+
+  let filtered = _growthRows.filter(r => {
+    if (fName   && !r.name.toLowerCase().includes(fName) &&
+                   !(r.collection||'').toLowerCase().includes(fName)) return false;
+    if (fColl   && r.collection !== fColl)        return false;
+    if (!dir(fDSess,  'd_sessions', r))           return false;
+    if (!dir(fDCvr,   'd_cvr',      r))           return false;
+    if (!dir(fDRev,   'd_revenue',  r))           return false;
+    if (!dir(fDUnits, 'd_units',    r))           return false;
+    if (fStatus && String(_score(r)) !== fStatus) return false;
+    return true;
+  });
+
+  // Sort
+  filtered.sort((a, b) => {
+    let av, bv;
+    if (_growthSortKey === '_status') { av = _score(a); bv = _score(b); }
+    else if (_growthSortKey === 'name' || _growthSortKey === 'collection') {
+      av = (a[_growthSortKey] || ''); bv = (b[_growthSortKey] || '');
+    } else { av = a[_growthSortKey] ?? 0; bv = b[_growthSortKey] ?? 0; }
+    const res = typeof av === 'number' && typeof bv === 'number'
+      ? av - bv : String(av).localeCompare(String(bv));
+    return _growthSortAsc ? res : -res;
+  });
+
+  document.getElementById('g-row-count').textContent =
+    `${filtered.length} / ${_growthRows.length} 筆`;
+
+  // Row renderer
+  const delta = v => {
+    if (v == null) return '<span style="color:#ccc">—</span>';
+    const col = v >= 0 ? '#2E7D32' : '#C62828';
+    return `<span style="color:${col};font-weight:700">${v>=0?'▲':'▼'} ${Math.abs(v).toFixed(1)}%</span>`;
+  };
+  const statusBadge = r => {
+    const s = _score(r);
+    const M = [[4,'🚀 全面成長','#2E7D32','#EEF7ED'],[3,'📈 小幅成長','#558B2F','#F1F8E9'],
+               [2,'➡️ 持平','#F57F17','#FFF8E1'],[1,'📉 小幅衰退','#E65100','#FBE9E7'],
+               [0,'⚠️ 需關注','#C62828','#FFEBEE']];
+    const [,text,color,bg] = M.find(([n])=>n===s)||M[4];
+    return `<span style="color:${color};background:${bg};font-weight:700;font-size:10px;
+      padding:2px 8px;border-radius:10px;white-space:nowrap">${text}</span>`;
+  };
+
+  const tbody = document.getElementById('g-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = filtered.length
+    ? filtered.map(r => `<tr>
+        <td class="name-cell">${r.name}</td>
+        <td class="left" style="font-size:10px">${r.collection}</td>
+        <td class="num">${r.curr_sessions.toLocaleString()}</td>
+        <td class="num">${delta(r.d_sessions)}</td>
+        <td class="num">${r.curr_cvr.toFixed(2)}%</td>
+        <td class="num">${delta(r.d_cvr)}</td>
+        <td class="num">$${fmtRev(r.curr_revenue)}</td>
+        <td class="num">${delta(r.d_revenue)}</td>
+        <td class="num">${r.curr_units.toLocaleString()}</td>
+        <td class="num">${delta(r.d_units)}</td>
+        <td class="num">${statusBadge(r)}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="11" class="empty">無符合條件的資料</td></tr>';
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
 function fmtK(n) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
-  return (n || 0).toLocaleString();
+  if(n>=1_000_000) return (n/1_000_000).toFixed(1)+'M';
+  if(n>=1_000)     return (n/1_000).toFixed(1)+'K';
+  return (n||0).toLocaleString();
 }
 function fmtRev(n) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
-  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
-  return (n || 0).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  if(n>=1_000_000) return (n/1_000_000).toFixed(2)+'M';
+  if(n>=1_000)     return (n/1_000).toFixed(1)+'K';
+  return (n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 </script>
 </body>

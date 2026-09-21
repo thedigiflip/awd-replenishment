@@ -12,7 +12,7 @@ Usage:
         resp = api.get_orders(MarketplaceIds=[marketplace_id], ...)
 """
 
-from sp_api.api import Orders, Inventories, Finances, Reports, AmazonWarehousingAndDistribution
+from sp_api.api import Orders, Inventories, Finances, Reports, AmazonWarehousingAndDistribution, ProductFees
 from sp_api.base import Marketplaces
 import structlog
 
@@ -35,13 +35,18 @@ _MP_ENUM: dict[str, Marketplaces] = {
 }
 
 
-def _credentials() -> dict:
+def _credentials(marketplace_id: str) -> dict:
     """
     每次呼叫都回傳新 dict，確保 sp_api library 不會重用過期的
     in-memory access token（LWA token 60 分鐘後過期）。
+
+    依 marketplace 對應到正確 region 的 refresh_token：
+      - NA (US/CA/MX) → SP_API_REFRESH_TOKEN
+      - EU (UK/DE/...) → SP_API_REFRESH_TOKEN_EU（沒設 fallback NA）
+      - FE (JP/AU/SG) → SP_API_REFRESH_TOKEN_FE（沒設 fallback NA）
     """
     creds: dict = {
-        "refresh_token":     settings.SP_API_REFRESH_TOKEN,
+        "refresh_token":     settings.refresh_token_for(marketplace_id),
         "lwa_app_id":        settings.SP_API_CLIENT_ID,
         "lwa_client_secret": settings.SP_API_CLIENT_SECRET,
     }
@@ -58,7 +63,7 @@ def _make_api(cls, marketplace_id: str):
     每次建立全新 API instance（不重用舊物件），
     強制 library 重新走 LWA 取得新 access token。
     """
-    return cls(credentials=_credentials(), marketplace=_resolve(marketplace_id))
+    return cls(credentials=_credentials(marketplace_id), marketplace=_resolve(marketplace_id))
 
 
 def _resolve(marketplace_id: str) -> Marketplaces:
@@ -87,3 +92,7 @@ def get_reports_api(marketplace_id: str) -> Reports:
 
 def get_awd_api(marketplace_id: str) -> AmazonWarehousingAndDistribution:
     return _make_api(AmazonWarehousingAndDistribution, marketplace_id)
+
+
+def get_fees_api(marketplace_id: str) -> ProductFees:
+    return _make_api(ProductFees, marketplace_id)

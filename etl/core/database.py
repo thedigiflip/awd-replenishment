@@ -106,6 +106,8 @@ def _create_schema(conn: duckdb.DuckDBPyConnection) -> None:
         );
 
         -- ── Inventory ────────────────────────────────────────────────────────
+        -- ⚠️ PK 含 marketplace_id — 支援多站點同一日相同 ASIN 各自獨立
+        -- （舊 schema 缺 marketplace_id 會導致 US→UK→DE 同步互相蓋掉）
         CREATE TABLE IF NOT EXISTS inventory (
             snapshot_date     DATE,
             asin              VARCHAR,
@@ -120,10 +122,10 @@ def _create_schema(conn: duckdb.DuckDBPyConnection) -> None:
             reserved_fc_transfers INTEGER,
             reserved_fc_processing INTEGER,
             total_quantity    INTEGER,
-            marketplace_id    VARCHAR,
+            marketplace_id    VARCHAR NOT NULL DEFAULT 'ATVPDKIKX0DER',
             raw_json          JSON,
             synced_at         TIMESTAMPTZ DEFAULT now(),
-            PRIMARY KEY (snapshot_date, asin, sku)
+            PRIMARY KEY (snapshot_date, asin, sku, marketplace_id)
         );
 
         -- ── Ads (Sponsored Products — daily summary) ─────────────────────────
@@ -214,6 +216,23 @@ def _create_schema(conn: duckdb.DuckDBPyConnection) -> None:
             PRIMARY KEY (report_date, sku, marketplace_id)
         );
 
+        -- ── Sync Anomalies（資料串接異常紀錄，可視化 + 自動 alert）──────────────
+        CREATE SEQUENCE IF NOT EXISTS seq_sync_anomalies_id START 1;
+        CREATE TABLE IF NOT EXISTS sync_anomalies (
+            id            BIGINT DEFAULT nextval('seq_sync_anomalies_id') PRIMARY KEY,
+            detected_at   TIMESTAMPTZ DEFAULT now(),
+            pipeline      VARCHAR,        -- 'awd_inventory' / 'fba_inventory' / 'sales_summary'
+            sku           VARCHAR,
+            marketplace_id VARCHAR DEFAULT '',  -- 空字串 = 跨站（AWD）；否則單一 marketplace
+            field         VARCHAR,        -- 'awd_inbound' / 'fulfillable_quantity' etc.
+            old_value     BIGINT,
+            new_value     BIGINT,
+            change_pct    DOUBLE,         -- 變動百分比 (負代表下降)
+            severity      VARCHAR,        -- 'critical' / 'warning' / 'info'
+            reason        VARCHAR,        -- 人類可讀原因
+            acknowledged  BOOLEAN DEFAULT FALSE
+        );
+
         -- ── Controls（補貨水位參數，可透過 API 動態調整）─────────────────────────
         CREATE TABLE IF NOT EXISTS replenishment_controls (
             key               VARCHAR PRIMARY KEY,
@@ -276,6 +295,49 @@ def _migrate_schema(conn: duckdb.DuckDBPyConnection) -> None:
             "sku_config", "eta",
             "ALTER TABLE sku_config ADD COLUMN IF NOT EXISTS eta VARCHAR DEFAULT ''"
         ),
+        # v3: cog (cost of goods, USD/unit) added to product_catalog
+        (
+            "product_catalog", "cog",
+            "ALTER TABLE product_catalog ADD COLUMN IF NOT EXISTS cog DECIMAL(10,4) DEFAULT 0"
+        ),
+        # v4: fba_fee (FBA fulfillment fee per unit, from SP-API Product Fees)
+        (
+            "product_catalog", "fba_fee",
+            "ALTER TABLE product_catalog ADD COLUMN IF NOT EXISTS fba_fee DECIMAL(10,4) DEFAULT 0"
+        ),
+        # v5: SZ 倉重構為兩個倉庫（美國倉 + 佳樂倉）+ Unit/Case
+        (
+            "sz_warehouse", "us_qty",
+            "ALTER TABLE sz_warehouse ADD COLUMN IF NOT EXISTS us_qty INTEGER DEFAULT 0"
+        ),
+        (
+            "sz_warehouse", "jl_qty",
+            "ALTER TABLE sz_warehouse ADD COLUMN IF NOT EXISTS jl_qty INTEGER DEFAULT 0"
+        ),
+        (
+            "sz_warehouse", "unit_per_case",
+            "ALTER TABLE sz_warehouse ADD COLUMN IF NOT EXISTS unit_per_case INTEGER DEFAULT 1"
+        ),
+        # v6: 欠數（已向工廠下單但未交付的 PO 數量，工廠交付後手動歸零）
+        (
+            "sz_warehouse", "pending_qty",
+            "ALTER TABLE sz_warehouse ADD COLUMN IF NOT EXISTS pending_qty INTEGER DEFAULT 0"
+        ),
+        # v7: 下單日期（欠數對應的下單日；約定交期日 = order_date + production_days，動態計算）
+        (
+            "sz_warehouse", "order_date",
+            "ALTER TABLE sz_warehouse ADD COLUMN IF NOT EXISTS order_date DATE"
+        ),
+        # v8: 工廠回覆交期（工廠實際承諾的交貨日期；若有 → 覆蓋約定交期做倒數）
+        (
+            "sz_warehouse", "factory_confirmed_date",
+            "ALTER TABLE sz_warehouse ADD COLUMN IF NOT EXISTS factory_confirmed_date DATE"
+        ),
+        # v10: sync_anomalies 加 marketplace_id — 避免跨站同 SKU 異常合併
+        (
+            "sync_anomalies", "marketplace_id",
+            "ALTER TABLE sync_anomalies ADD COLUMN IF NOT EXISTS marketplace_id VARCHAR DEFAULT ''"
+        ),
     ]
     for table, column, sql in migrations:
         try:
@@ -287,3 +349,77 @@ def _migrate_schema(conn: duckdb.DuckDBPyConnection) -> None:
                 pass  # column already present — nothing to do
             else:
                 log.warning("db.migration_warning", table=table, column=column, error=str(exc))
+
+    # ── v9: inventory PK 加入 marketplace_id（防止多站點同 SKU 互相蓋掉）───────
+    _migrate_inventory_pk(conn)
+
+
+def _migrate_inventory_pk(conn: duckdb.DuckDBPyConnection) -> None:
+    """
+    偵測 inventory 表的 PK 是否已包含 marketplace_id。
+    若沒有 → 重建表（保留資料，重建 constraint）。
+    DuckDB 不支援 ALTER PRIMARY KEY，只能 rebuild。
+    """
+    try:
+        # 用 duckdb_constraints 系統表檢查 PK 欄位
+        rows = conn.execute("""
+            SELECT constraint_column_names
+            FROM duckdb_constraints()
+            WHERE table_name = 'inventory' AND constraint_type = 'PRIMARY KEY'
+        """).fetchall()
+        if not rows:
+            return  # 沒 PK（新建的表已用新 schema），略過
+        pk_cols = rows[0][0]  # list-like
+        if "marketplace_id" in pk_cols:
+            return  # 已是新 PK，不用做
+    except Exception as exc:
+        log.warning("db.pk_check_failed", error=str(exc))
+        return
+
+    log.info("db.inventory_pk_migration_start", old_pk=str(pk_cols))
+    try:
+        # 若舊資料裡有 NULL marketplace_id → 全部視為 US（歷史資料，最保守假設）
+        conn.execute("""
+            UPDATE inventory
+            SET marketplace_id = 'ATVPDKIKX0DER'
+            WHERE marketplace_id IS NULL OR marketplace_id = ''
+        """)
+        # 建臨時表，含新 PK
+        conn.execute("""
+            CREATE TABLE inventory_new (
+                snapshot_date     DATE,
+                asin              VARCHAR,
+                fnsku             VARCHAR,
+                sku               VARCHAR,
+                product_name      VARCHAR,
+                condition         VARCHAR,
+                fulfillable_quantity INTEGER,
+                inbound_working   INTEGER,
+                inbound_shipped   INTEGER,
+                inbound_receiving INTEGER,
+                reserved_fc_transfers INTEGER,
+                reserved_fc_processing INTEGER,
+                total_quantity    INTEGER,
+                marketplace_id    VARCHAR NOT NULL DEFAULT 'ATVPDKIKX0DER',
+                raw_json          JSON,
+                synced_at         TIMESTAMPTZ DEFAULT now(),
+                PRIMARY KEY (snapshot_date, asin, sku, marketplace_id)
+            )
+        """)
+        conn.execute("""
+            INSERT INTO inventory_new
+            SELECT snapshot_date, asin, fnsku, sku, product_name, condition,
+                   fulfillable_quantity, inbound_working, inbound_shipped,
+                   inbound_receiving, reserved_fc_transfers, reserved_fc_processing,
+                   total_quantity,
+                   COALESCE(NULLIF(marketplace_id, ''), 'ATVPDKIKX0DER') AS marketplace_id,
+                   raw_json, synced_at
+            FROM inventory
+        """)
+        conn.execute("DROP TABLE inventory")
+        conn.execute("ALTER TABLE inventory_new RENAME TO inventory")
+        n = conn.execute("SELECT COUNT(*) FROM inventory").fetchone()[0]
+        log.info("db.inventory_pk_migration_done", rows_kept=n)
+    except Exception as exc:
+        log.error("db.inventory_pk_migration_failed", error=str(exc))
+        raise

@@ -34,9 +34,15 @@ class Settings(BaseSettings):
     )
 
     # ── SP-API ────────────────────────────────────────────────────────────────
-    SP_API_REFRESH_TOKEN: str = Field(..., description="LWA Refresh Token")
-    SP_API_CLIENT_ID: str     = Field(..., description="LWA Client ID")
-    SP_API_CLIENT_SECRET: str = Field(..., description="LWA Client Secret")
+    # 主 refresh_token（也是 NA region 用的，向後相容）
+    SP_API_REFRESH_TOKEN: str    = Field(..., description="LWA Refresh Token (NA region)")
+    SP_API_CLIENT_ID: str        = Field(..., description="LWA Client ID")
+    SP_API_CLIENT_SECRET: str    = Field(..., description="LWA Client Secret")
+
+    # 各 region 專屬 refresh_token（EU / FE 都是各自獨立授權的）
+    # 若某個 region 沒填 → fallback 用 SP_API_REFRESH_TOKEN（NA）
+    SP_API_REFRESH_TOKEN_EU: str = Field("", description="LWA Refresh Token (EU region, UK/DE/...)")
+    SP_API_REFRESH_TOKEN_FE: str = Field("", description="LWA Refresh Token (FE region, JP/AU/SG)")
 
     # 支援多 marketplace，逗號分隔
     SP_API_MARKETPLACE_IDS: list[str] = Field(
@@ -54,6 +60,20 @@ class Settings(BaseSettings):
     def region_for(self, marketplace_id: str) -> str:
         """回傳該 marketplace 對應的 SP-API region。"""
         return MARKETPLACE_REGION_MAP.get(marketplace_id, "na")
+
+    def refresh_token_for(self, marketplace_id: str) -> str:
+        """
+        依 marketplace 選對應 region 的 refresh_token。
+        - NA marketplaces → SP_API_REFRESH_TOKEN
+        - EU marketplaces → SP_API_REFRESH_TOKEN_EU（沒填則 fallback NA）
+        - FE marketplaces → SP_API_REFRESH_TOKEN_FE（沒填則 fallback NA）
+        """
+        region = self.region_for(marketplace_id)
+        if region == "eu" and self.SP_API_REFRESH_TOKEN_EU:
+            return self.SP_API_REFRESH_TOKEN_EU
+        if region == "fe" and self.SP_API_REFRESH_TOKEN_FE:
+            return self.SP_API_REFRESH_TOKEN_FE
+        return self.SP_API_REFRESH_TOKEN
 
     # ── AWS (optional, for IAM role) ──────────────────────────────────────────
     AWS_ACCESS_KEY_ID: str     = Field("", description="AWS Access Key (optional)")

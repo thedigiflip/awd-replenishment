@@ -15,7 +15,7 @@ from core.config import settings
 from core.database import init_db, close_db
 from core.db_meta import init_meta_db
 from routers import orders, inventory, ads, finance
-from routers import replenishment, sz_warehouse, awd_upload, product_catalog, sales, traffic
+from routers import replenishment, sz_warehouse, awd_upload, product_catalog, sales, traffic, fees, health
 
 log = structlog.get_logger()
 
@@ -55,6 +55,7 @@ app.include_router(ads.router,          prefix="/etl/ads",          tags=["ETL -
 app.include_router(finance.router,      prefix="/etl/finance",      tags=["ETL - Finance"])
 app.include_router(sales.router,        prefix="/etl/sales",        tags=["ETL - Sales"])
 app.include_router(traffic.router,      prefix="/etl/traffic",      tags=["ETL - Traffic"])
+app.include_router(fees.router,         prefix="/etl/fees",          tags=["ETL - Fees"])
 
 # ─── Warehouse Upload Routers ────────────────────────────────────────────────
 app.include_router(sz_warehouse.router,   prefix="/etl/sz",      tags=["Warehouse - SZ"])
@@ -63,6 +64,7 @@ app.include_router(product_catalog.router, prefix="/etl/catalog", tags=["Catalog
 
 # ─── Replenishment API ────────────────────────────────────────────────────────
 app.include_router(replenishment.router, prefix="/replenishment",   tags=["Replenishment"])
+app.include_router(health.router,        prefix="/etl/health",       tags=["Data Health"])
 
 # ─── Static files (Dashboard) ────────────────────────────────────────────────
 if os.path.isdir(STATIC_DIR):

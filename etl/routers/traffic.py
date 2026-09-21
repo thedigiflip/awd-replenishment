@@ -22,9 +22,9 @@ log    = structlog.get_logger()
 
 
 class TrafficSyncRequest(BaseModel):
-    marketplace_id: str = Field(
-        default="ATVPDKIKX0DER",
-        description="Amazon Marketplace ID（預設 US）",
+    marketplace_id: Optional[str] = Field(
+        default=None,
+        description="Amazon Marketplace ID；不傳 → loop 所有已設定的 marketplace",
     )
     data_start_date: Optional[str] = Field(
         default=None,
@@ -36,17 +36,30 @@ class TrafficSyncRequest(BaseModel):
     )
 
 
-@router.post("/sync", summary="觸發 Sales & Traffic Report 同步（背景執行）")
+async def _run_traffic_all_marketplaces(svc, run_id: int, start: str, end: str):
+    """依序跑每個 marketplace 的 traffic sync；單站失敗不影響其他站。"""
+    from core.config import settings
+    mps = settings.SP_API_MARKETPLACE_IDS or ["ATVPDKIKX0DER"]
+    results = []
+    for mp in mps:
+        try:
+            n = await svc.run(run_id=run_id, marketplace_id=mp,
+                              data_start_date=start, data_end_date=end)
+            results.append({"marketplace_id": mp, "status": "ok", "rows": n})
+        except Exception as e:
+            log.error("traffic.marketplace_failed", marketplace_id=mp, error=str(e))
+            results.append({"marketplace_id": mp, "status": "error", "error": str(e)[:200]})
+    log.info("traffic.run_all_done", run_id=run_id, results=results)
+
+
+@router.post("/sync", summary="觸發 Sales & Traffic Report 同步（不傳 marketplace_id → loop 全站）")
 async def sync_traffic(req: TrafficSyncRequest, background_tasks: BackgroundTasks):
     """
     向 SP-API 提交 GET_SALES_AND_TRAFFIC_REPORT（by Child ASIN）。
-
-    - 報告通常需要 5–15 分鐘生成，完成後自動解析並寫入 DuckDB sales_traffic。
-    - 立即回傳 run_id，用 GET /etl/traffic/status 輪詢進度。
-    - 若未指定日期，自動查詢上個完整月份。
-    - 注意：每個 Marketplace 每天最多觸發 1 次報告請求。
+    - marketplace_id 不傳 → loop 所有 SP_API_MARKETPLACE_IDS
+    - marketplace_id 有傳 → 只跑該站點
+    - 報告 5–15 分鐘完成，每 marketplace 每天最多 1 次
     """
-    # 日期預設：上個完整月份
     if req.data_start_date and req.data_end_date:
         start, end = req.data_start_date, req.data_end_date
     else:
@@ -55,26 +68,35 @@ async def sync_traffic(req: TrafficSyncRequest, background_tasks: BackgroundTask
     svc    = TrafficService()
     run_id = await svc.start_run()
 
-    background_tasks.add_task(
-        svc.run,
-        run_id=run_id,
-        marketplace_id=req.marketplace_id,
-        data_start_date=start,
-        data_end_date=end,
-    )
+    if req.marketplace_id:
+        background_tasks.add_task(
+            svc.run,
+            run_id=run_id,
+            marketplace_id=req.marketplace_id,
+            data_start_date=start,
+            data_end_date=end,
+        )
+        log.info("traffic.sync_triggered", run_id=run_id,
+                 marketplace_id=req.marketplace_id, start=start, end=end, mode="single")
+        return {
+            "run_id":           run_id,
+            "status":           "running",
+            "message":          "Traffic report requested. Check /etl/traffic/status in 5–15 minutes.",
+            "marketplace_id":   req.marketplace_id,
+            "data_start_date":  start,
+            "data_end_date":    end,
+        }
 
-    log.info(
-        "traffic.sync_triggered",
-        run_id=run_id,
-        marketplace_id=req.marketplace_id,
-        start=start,
-        end=end,
-    )
+    background_tasks.add_task(_run_traffic_all_marketplaces, svc, run_id, start, end)
+    from core.config import settings
+    mps = settings.SP_API_MARKETPLACE_IDS or ["ATVPDKIKX0DER"]
+    log.info("traffic.sync_triggered", run_id=run_id, marketplaces=mps,
+             start=start, end=end, mode="all")
     return {
         "run_id":           run_id,
         "status":           "running",
-        "message":          "Traffic report requested. Check /etl/traffic/status in 5–15 minutes.",
-        "marketplace_id":   req.marketplace_id,
+        "message":          f"Traffic report requested for {len(mps)} marketplaces.",
+        "marketplaces":     mps,
         "data_start_date":  start,
         "data_end_date":    end,
     }
@@ -115,66 +137,81 @@ async def get_traffic_data():
             # ── 月趨勢 ──────────────────────────────────────────────────────
             monthly_rows = conn.execute("""
                 SELECT
-                    LEFT(CAST(data_start_date AS VARCHAR), 7)  AS month,
-                    SUM(sessions)                              AS sessions,
-                    SUM(page_views)                            AS page_views,
+                    LEFT(CAST(data_start_date AS VARCHAR), 7)           AS month,
+                    SUM(sessions)                                        AS sessions,
+                    SUM(page_views)                                      AS page_views,
                     CASE WHEN SUM(sessions) > 0
-                         THEN ROUND(
-                             CAST(SUM(total_units_ordered) AS DOUBLE)
-                             / SUM(sessions) * 100, 2)
-                         ELSE 0 END                            AS cvr,
-                    SUM(total_units_ordered)                   AS total_units,
-                    ROUND(SUM(total_ordered_product_sales), 2) AS total_revenue
+                         THEN ROUND(CAST(SUM(total_units_ordered) AS DOUBLE)
+                              / SUM(sessions) * 100, 2)
+                         ELSE 0 END                                      AS cvr,
+                    SUM(total_units_ordered)                             AS total_units,
+                    ROUND(SUM(total_ordered_product_sales), 2)           AS total_revenue
                 FROM sales_traffic
                 GROUP BY month
                 ORDER BY month
             """).fetchall()
 
-            # ── 依 Collection 加總 ──────────────────────────────────────────
+            # ── 依 Collection 加總（含 COG + FBA fee）────────────────────────
             coll_rows = conn.execute("""
                 SELECT
-                    COALESCE(NULLIF(TRIM(collection), ''), 'Unknown') AS collection,
-                    SUM(sessions)                                      AS sessions,
-                    SUM(total_units_ordered)                           AS total_units,
-                    ROUND(SUM(total_ordered_product_sales), 2)         AS total_revenue
-                FROM sales_traffic
-                GROUP BY collection
+                    COALESCE(NULLIF(TRIM(st.collection), ''), 'Unknown') AS coll,
+                    SUM(st.sessions)                                      AS sessions,
+                    SUM(st.total_units_ordered)                           AS total_units,
+                    ROUND(SUM(st.total_ordered_product_sales), 2)         AS total_revenue,
+                    ROUND(SUM(st.total_units_ordered * (
+                        COALESCE(pc.cog, 0) + COALESCE(pc.fba_fee, 0)
+                    )), 2)                                                 AS total_variable_cost,
+                    ROUND(SUM(st.total_ordered_product_sales) * 0.15, 2)  AS total_referral_fee
+                FROM sales_traffic st
+                LEFT JOIN product_catalog pc ON st.child_asin = pc.asin
+                GROUP BY coll
                 ORDER BY total_revenue DESC
             """).fetchall()
 
-            # ── Top 30 SKU（依 revenue）──────────────────────────────────────
+            # ── Top SKU（含 COG、FBA fee、MSRP）──────────────────────────────
             sku_rows = conn.execute("""
                 SELECT
-                    sku,
-                    COALESCE(NULLIF(TRIM(collection), ''), 'Unknown') AS collection,
-                    MAX(product_name)                                   AS product_name,
-                    SUM(sessions)                                       AS sessions,
-                    SUM(total_units_ordered)                            AS total_units,
-                    ROUND(SUM(total_ordered_product_sales), 2)          AS total_revenue
-                FROM sales_traffic
-                GROUP BY sku, collection
+                    st.sku,
+                    COALESCE(NULLIF(TRIM(st.collection), ''), 'Unknown') AS collection,
+                    MAX(st.product_name)                                   AS product_name,
+                    SUM(st.sessions)                                       AS sessions,
+                    SUM(st.total_units_ordered)                            AS total_units,
+                    ROUND(SUM(st.total_ordered_product_sales), 2)          AS total_revenue,
+                    MAX(COALESCE(pc.cog, 0))                               AS cog,
+                    MAX(COALESCE(pc.fba_fee, 0))                           AS fba_fee,
+                    ROUND(SUM(st.total_units_ordered * (
+                        COALESCE(pc.cog, 0) + COALESCE(pc.fba_fee, 0)
+                    )), 2)                                                  AS total_variable_cost,
+                    ROUND(SUM(st.total_ordered_product_sales) * 0.15, 2)   AS total_referral_fee
+                FROM sales_traffic st
+                LEFT JOIN product_catalog pc ON st.child_asin = pc.asin
+                WHERE st.sku != ''
+                GROUP BY st.sku, st.collection
                 ORDER BY total_revenue DESC
-                LIMIT 30
+                LIMIT 50
             """).fetchall()
 
-            # ── 明細（每月 × SKU）──────────────────────────────────────────
+            # ── 明細（每月 × SKU，含 COG + FBA fee）──────────────────────────
             detail_rows = conn.execute("""
                 SELECT
-                    LEFT(CAST(data_start_date AS VARCHAR), 7)          AS month,
-                    sku,
-                    COALESCE(NULLIF(TRIM(collection), ''), 'Unknown')  AS collection,
-                    product_name,
-                    SUM(sessions)                                       AS sessions,
-                    SUM(page_views)                                     AS page_views,
-                    ROUND(SUM(total_ordered_product_sales), 2)          AS revenue,
-                    SUM(total_units_ordered)                            AS units,
-                    CASE WHEN SUM(sessions) > 0
-                         THEN ROUND(
-                             CAST(SUM(total_units_ordered) AS DOUBLE)
-                             / SUM(sessions) * 100, 2)
-                         ELSE 0 END                                     AS cvr
-                FROM sales_traffic
-                GROUP BY month, sku, collection, product_name
+                    LEFT(CAST(st.data_start_date AS VARCHAR), 7)          AS month,
+                    st.child_asin,
+                    st.sku,
+                    COALESCE(NULLIF(TRIM(st.collection), ''), 'Unknown')  AS collection,
+                    st.product_name,
+                    SUM(st.sessions)                                       AS sessions,
+                    SUM(st.page_views)                                     AS page_views,
+                    ROUND(SUM(st.total_ordered_product_sales), 2)          AS revenue,
+                    SUM(st.total_units_ordered)                            AS units,
+                    CASE WHEN SUM(st.sessions) > 0
+                         THEN ROUND(CAST(SUM(st.total_units_ordered) AS DOUBLE)
+                              / SUM(st.sessions) * 100, 2)
+                         ELSE 0 END                                        AS cvr,
+                    MAX(COALESCE(pc.cog, 0))                               AS cog,
+                    MAX(COALESCE(pc.fba_fee, 0))                           AS fba_fee
+                FROM sales_traffic st
+                LEFT JOIN product_catalog pc ON st.child_asin = pc.asin
+                GROUP BY month, st.child_asin, st.sku, st.collection, st.product_name
                 ORDER BY month DESC, revenue DESC
             """).fetchall()
 
@@ -184,6 +221,19 @@ async def get_traffic_data():
                 FROM sales_traffic
                 ORDER BY month DESC
             """).fetchall()
+
+            REFERRAL_RATE = 0.15  # 固定 15%
+
+            def _msrp(revenue, units):
+                return round(revenue / units, 2) if units > 0 else 0.0
+
+            def _profit(revenue, var_cost, referral_fee):
+                """Revenue - COG - FBA fee - Referral fee"""
+                return round(revenue - var_cost - referral_fee, 2)
+
+            def _margin(revenue, var_cost, referral_fee):
+                profit = revenue - var_cost - referral_fee
+                return round(profit / revenue * 100, 1) if revenue > 0 else 0.0
 
             return {
                 "monthly_trends": [
@@ -199,39 +249,61 @@ async def get_traffic_data():
                 ],
                 "by_collection": [
                     {
-                        "collection":    r[0],
-                        "sessions":      r[1] or 0,
-                        "total_units":   r[2] or 0,
-                        "total_revenue": float(r[3] or 0),
+                        "collection":        r[0],
+                        "sessions":          r[1] or 0,
+                        "total_units":       r[2] or 0,
+                        "total_revenue":     float(r[3] or 0),
+                        "total_variable_cost": float(r[4] or 0),
+                        "total_referral_fee":  float(r[5] or 0),
+                        "total_cost":        float(r[4] or 0) + float(r[5] or 0),
+                        "profit":            _profit(float(r[3] or 0), float(r[4] or 0), float(r[5] or 0)),
+                        "margin":            _margin(float(r[3] or 0), float(r[4] or 0), float(r[5] or 0)),
                     }
                     for r in coll_rows
                 ],
                 "top_skus": [
                     {
-                        "sku":           r[0],
-                        "collection":    r[1],
-                        "product_name":  r[2],
-                        "sessions":      r[3] or 0,
-                        "total_units":   r[4] or 0,
-                        "total_revenue": float(r[5] or 0),
+                        "sku":              r[0],
+                        "collection":       r[1],
+                        "product_name":     r[2],
+                        "sessions":         r[3] or 0,
+                        "total_units":      r[4] or 0,
+                        "total_revenue":    float(r[5] or 0),
+                        "cog":              float(r[6] or 0),
+                        "fba_fee":          float(r[7] or 0),
+                        "total_variable_cost": float(r[8] or 0),
+                        "total_referral_fee":  float(r[9] or 0),
+                        "msrp":             _msrp(float(r[5] or 0), r[4] or 0),
+                        "profit":           _profit(float(r[5] or 0), float(r[8] or 0), float(r[9] or 0)),
+                        "margin":           _margin(float(r[5] or 0), float(r[8] or 0), float(r[9] or 0)),
                     }
                     for r in sku_rows
                 ],
                 "detail": [
                     {
                         "month":        r[0],
-                        "sku":          r[1],
-                        "collection":   r[2],
-                        "product_name": r[3],
-                        "sessions":     r[4] or 0,
-                        "page_views":   r[5] or 0,
-                        "revenue":      float(r[6] or 0),
-                        "units":        r[7] or 0,
-                        "cvr":          float(r[8] or 0),
+                        "child_asin":   r[1],
+                        "sku":          r[2],
+                        "collection":   r[3],
+                        "product_name": r[4],
+                        "sessions":     r[5] or 0,
+                        "page_views":   r[6] or 0,
+                        "revenue":      float(r[7] or 0),
+                        "units":        r[8] or 0,
+                        "cvr":          float(r[9] or 0),
+                        "cog":          float(r[10] or 0),
+                        "fba_fee":      float(r[11] or 0),
+                        "msrp":         _msrp(float(r[7] or 0), r[8] or 0),
+                        "profit":       _profit(
+                            float(r[7] or 0),
+                            (r[8] or 0) * (float(r[10] or 0) + float(r[11] or 0)),
+                            float(r[7] or 0) * REFERRAL_RATE,
+                        ),
                     }
                     for r in detail_rows
                 ],
                 "available_months": [r[0] for r in month_rows],
+                "fee_config": {"referral_rate": REFERRAL_RATE},
             }
         finally:
             conn.close()
@@ -254,6 +326,27 @@ class BackfillRequest(BaseModel):
         description="結束月份 YYYY-MM，留空自動使用上個完整月份",
         pattern=r"^\d{4}-\d{2}$",
     )
+
+
+@router.post("/sync-mtd", summary="同步當月 MTD 資料（當月 1 號 → 昨天，每天覆蓋）")
+async def sync_mtd(background_tasks: BackgroundTasks,
+                   marketplace_id: str = "ATVPDKIKX0DER"):
+    """
+    取得本月 Month-to-Date 資料（月初 → 昨天的累計值）。
+    - 可每天執行，資料會直接覆蓋上次的 MTD，不會產生重複。
+    - 建議透過 n8n 每天早上自動觸發。
+    - 完成後當月資料會出現在 Dashboard 流量分析 Tab。
+    """
+    svc    = TrafficService()
+    run_id = await svc.start_run()
+    background_tasks.add_task(svc.run_mtd, run_id=run_id, marketplace_id=marketplace_id)
+    log.info("traffic.mtd_triggered", run_id=run_id, marketplace_id=marketplace_id)
+    return {
+        "run_id":         run_id,
+        "status":         "running",
+        "message":        "MTD sync started. Check /etl/traffic/status in 5–15 minutes.",
+        "marketplace_id": marketplace_id,
+    }
 
 
 @router.post("/backfill", summary="回補歷史資料（按月份逐一請求，背景執行）")

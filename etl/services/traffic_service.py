@@ -398,6 +398,59 @@ class TrafficService(BaseService):
 
         log.info("traffic.backfill_done", total_months=len(months), processed=processed)
 
+    # ── MTD Sync：當月 1 號 → 昨天，每天覆蓋 ────────────────────────────────────
+
+    async def run_mtd(self, run_id: int, marketplace_id: str) -> None:
+        """
+        取得當月 MTD（Month-to-Date）資料：
+          - 請求範圍：當月 1 號 → 昨天
+          - 存入 DB 時 data_end_date 固定用當月最後一天
+            → PRIMARY KEY 不變，每天 upsert 都覆蓋同一批 row
+          - 若今天是 1 號（昨天還在上個月），跳過不跑
+        """
+        today       = datetime.now(tz=timezone.utc).date()
+        month_start = today.replace(day=1)
+        yesterday   = today - timedelta(days=1)
+
+        if yesterday < month_start:
+            log.info("traffic.mtd_skip", reason="first_day_of_month")
+            await self.finish_run(run_id, 0)
+            return
+
+        last_day  = monthrange(today.year, today.month)[1]
+        month_end = today.replace(day=last_day)
+
+        start_str   = str(month_start)  # e.g. "2026-05-01"
+        request_end = str(yesterday)    # e.g. "2026-05-26" — SP-API 請求用
+        db_end      = str(month_end)    # e.g. "2026-05-31" — DB PRIMARY KEY 用
+
+        log.info("traffic.mtd_start", run_id=run_id,
+                 request_range=f"{start_str} → {request_end}",
+                 db_end=db_end, marketplace_id=marketplace_id)
+        try:
+            report_id = await self._create_report(marketplace_id, start_str, request_end)
+            log.info("traffic.mtd_report_created", report_id=report_id)
+
+            doc_id = await self._poll_until_done(marketplace_id, report_id)
+            log.info("traffic.mtd_report_ready", doc_id=doc_id)
+
+            # 傳入 db_end，讓 rows 的 data_end_date = 月底（PRIMARY KEY 固定）
+            rows = await self._download_and_parse(
+                marketplace_id, doc_id, start_str, db_end
+            )
+            log.info("traffic.mtd_parsed", raw_rows=len(rows))
+
+            rows  = await self._enrich_with_catalog(rows)
+            total = await self._upsert(rows)
+            await self.finish_run(run_id, total)
+            log.info("traffic.mtd_done", run_id=run_id, rows=total,
+                     covered=f"{start_str} → {request_end}")
+
+        except Exception as e:
+            log.error("traffic.mtd_failed", run_id=run_id, error=str(e))
+            await self.fail_run(run_id, str(e))
+            raise
+
     async def _month_exists(
         self, start_date: str, end_date: str, marketplace_id: str
     ) -> bool:
