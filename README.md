@@ -1,216 +1,222 @@
 # MAGEASY Replenishment & Advertising Dashboard
 
-Amazon FBA 補貨與廣告資料整合系統，支援多站點（US / UK / DE）自動同步、庫存分析、返單建議、廣告效益追蹤。
+Multi-marketplace Amazon FBA inventory, sales, and advertising management system supporting US / UK / DE with automated daily sync, inventory analytics, replenishment recommendations, and advertising performance tracking.
 
 ---
 
-## 快速給 Claude 看的 3 分鐘簡介
+## 3-Minute Brief (for Claude and new engineers)
 
-**這個系統做什麼？** 每天自動從 Amazon SP-API 抓資料（庫存、銷售、訂單、費用、廣告），寫入本地 DuckDB，透過 FastAPI 提供給網頁 Dashboard 顯示。Dashboard 綜合 Anchor 表（產品主檔）、SZ 倉（工廠端庫存）、Amazon FBA/AWD 庫存，計算每個 SKU 的補貨建議（移倉數、返單量、AWD 補貨量）。
+**What this system does:** Automatically pulls data from Amazon SP-API daily (inventory, sales, orders, fees, ads), writes to local DuckDB, and serves it via FastAPI to a single-page HTML dashboard. Combines the Anchor product master, Shenzhen warehouse (factory-side stock), and Amazon FBA/AWD inventory to compute per-SKU replenishment recommendations (transfer quantity, reorder quantity, AWD replenishment).
 
-**架構：** n8n (排程) → FastAPI (ETL 端點) → DuckDB (儲存) → 靜態 HTML Dashboard  
-**執行方式：** `docker compose up -d`，服務跑在 port 8000（etl）、5678（n8n）  
-**多站點：** 一套 code 支援 3 站，各站資料獨立，跨站共用商品主檔 & 深圳倉庫存
+**Architecture:** n8n (scheduler) → FastAPI (ETL endpoints) → DuckDB (storage) → static HTML dashboard
+**Run:** `docker compose up -d`; services on port 8000 (etl) and 5678 (n8n)
+**Multi-marketplace:** One codebase serves 3 sites, per-site data isolation, shared product catalog & factory warehouse
 
 ---
 
-## 系統架構
+## System Architecture
 
-### 服務容器（`docker-compose.yml`）
+### Service Containers (`docker-compose.yml`)
 
-| 容器 | Port | 說明 |
+| Container | Port | Description |
 |---|---|---|
-| `sp_etl` | 8000 | FastAPI 主服務（`etl/main.py`）+ 靜態 Dashboard |
-| `sp_n8n` | 5678 | n8n 排程執行 workflow |
+| `sp_etl` | 8000 | FastAPI main service (`etl/main.py`) + static dashboard |
+| `sp_n8n` | 5678 | n8n scheduler for automated workflows |
 
-### 資料層
+### Data Layer
 
-**DuckDB**（`/data/sp_api.duckdb`）—— 主要業務資料
-- `inventory` — Amazon FBA 庫存快照（`PRIMARY KEY (snapshot_date, asin, sku, marketplace_id)`）
-- `awd_inventory` — Amazon Warehouse & Distribution 庫存（**US-only**，no marketplace column）
-- `sales_summary` — 每日銷售彙總（`PRIMARY KEY (report_date, sku, marketplace_id)`）
-- `orders` / `order_items` — 訂單 & 訂單明細
-- `sales_traffic` — Sales & Traffic 月報（Session、Buy Box、CVR）
-- `ads_sponsored_products` — Sponsored Products 廣告資料
-- `sz_warehouse` — 深圳倉庫存（工廠端，跨站共用）
-- `product_catalog` — MAGEASY Anchor 產品主檔（跨站共用，SKU→ASIN 主要對應）
-- `sku_config` — 產品類型 & 箱規（可從 Dashboard 編輯）
-- `replenishment_controls` — 補貨水位參數（動態調整）
-- `sync_anomalies` — 資料異常偵測紀錄
+**DuckDB** (`/data/sp_api.duckdb`) — primary business data store
 
-**SQLite**（`/data/sp_api_meta.db`）—— pipeline 執行紀錄（run_id / status / error）
+| Table | Purpose | Marketplace Scope |
+|---|---|---|
+| `inventory` | Amazon FBA inventory snapshots | Per-site (`PRIMARY KEY (snapshot_date, asin, sku, marketplace_id)`) |
+| `awd_inventory` | Amazon Warehouse & Distribution stock | **US only** (no marketplace column) |
+| `sales_summary` | Daily sales aggregates | Per-site (`PRIMARY KEY (report_date, sku, marketplace_id)`) |
+| `orders` / `order_items` | Orders and line items | Per-site |
+| `sales_traffic` | Session, Buy Box, CVR monthly reports | Per-site |
+| `ads_sponsored_products` | Sponsored Products ad data | Currently US only |
+| `sz_warehouse` | Shenzhen warehouse (factory-side stock) | Shared across sites |
+| `product_catalog` | MAGEASY Anchor master (SKU→ASIN) | Shared across sites |
+| `sku_config` | Product type & case-pack settings | Shared |
+| `replenishment_controls` | Dynamic replenishment thresholds | Shared |
+| `sync_anomalies` | Data drift detection log | Per-site |
+
+**SQLite** (`/data/sp_api_meta.db`) — pipeline execution log (run_id / status / error)
 
 ---
 
-## 多站點設計（US / UK / DE）
+## Multi-marketplace Design (US / UK / DE)
 
-**設定於 `.env`**：
+**Configuration in `.env`:**
 ```
 SP_API_MARKETPLACE_IDS=["ATVPDKIKX0DER","A1F83G8C2ARO7P","A1PA6795UKMFR9"]
 SP_API_REFRESH_TOKEN=Atzr|...       # NA region (US/CA/MX)
 SP_API_REFRESH_TOKEN_EU=Atzr|...    # EU region (UK/DE/FR/IT/ES)
-SP_API_REFRESH_TOKEN_FE=            # FE region (JP/AU/SG)  留空
+SP_API_REFRESH_TOKEN_FE=            # FE region (JP/AU/SG), unused
 ```
 
-Marketplace IDs：
-- US = `ATVPDKIKX0DER`（NA region）
-- UK = `A1F83G8C2ARO7P`（EU region）
-- DE = `A1PA6795UKMFR9`（EU region）
+Marketplace IDs:
+- US =  (NA region)
+- UK =  (EU region)
+- DE =  (EU region)
 
-### 資料共用 vs 獨立
+### Data Isolation Matrix
 
-| 資料類型 | US | UK | DE | 說明 |
+| Data Type | US | UK | DE | Isolation Method |
 |---|---|---|---|---|
-| FBA 庫存 | ✅ 獨立 | ✅ 獨立 | ✅ 獨立 | `inventory.marketplace_id` |
-| AWD 庫存 | ✅ 顯示 | 0 | 0 | AWD 只有美國有 |
-| Sales | ✅ 獨立 | ✅ 獨立 | ✅ 獨立 | 依 `currency` 分流（USD/GBP/EUR）|
-| Orders | ✅ 獨立 | ✅ 獨立 | ✅ 獨立 | `orders.marketplace_id` |
-| 深圳倉 / 佳樂倉 | 共用 | 共用 | 共用 | 工廠端庫存 |
-| Anchor / SKU 對應 | 共用 | 共用 | 共用 | 一份商品主檔 |
-| Fees / Traffic | ✅ 獨立 | ✅ 獨立 | ✅ 獨立 | Router loop 全站 |
+| FBA Inventory | Independent | Independent | Independent | `inventory.marketplace_id` |
+| AWD Inventory | Shown | 0 | 0 | AWD is US-only service |
+| Sales | Independent | Independent | Independent | Split by `currency` (USD/GBP/EUR) |
+| Orders | Independent | Independent | Independent | `orders.marketplace_id` |
+| Shenzhen / JL warehouse | Shared | Shared | Shared | Factory-side stock |
+| Product catalog (Anchor) | Shared | Shared | Shared | One master file |
+| Fees / Traffic | Independent | Independent | Independent | Router loops all sites |
 
-### 關鍵設計決策
+### Key Architectural Decisions
 
-1. **`inventory` PK 包含 `marketplace_id`**：避免 SP-API loop 三站時互相覆蓋
-2. **Sales 報告是 region-level**（Amazon 帳號級）：一次 EU 呼叫回傳所有 EU 站資料 → 依 `currency` 欄分流至 UK / DE
-3. **AWD 是 US-only 服務**：Replenishment 查詢用 `WHERE ? = 'ATVPDKIKX0DER'` 守門，非 US 站 AWD 全為 0
-4. **Fees / Traffic router 不傳 marketplace_id → loop 全站**；有傳 → 只跑該站（相容單站呼叫）
+1. **`inventory` PK includes `marketplace_id`** — prevents SP-API loop from overwriting rows across sites (same ASIN+SKU on same date)
+2. **Sales report is region-level** (Amazon account-level): one EU API call returns all EU sites' data → split into UK / DE using the `currency` field
+3. **AWD is US-only service**: replenishment SQL guards with `WHERE ? = 'ATVPDKIKX0DER'`, forcing AWD values to 0 on non-US dashboards
+4. **Fees / Traffic router without marketplace_id → loops all sites**; with marketplace_id → only that site (compatible with single-site calls)
 
 ---
 
-## 核心業務邏輯
+## Core Business Logic
 
-### 補貨計算（`services/replenishment_service.py`）
+### Replenishment Computation (`services/replenishment_service.py`)
 
-**Key = ASIN**（不是 SKU），因為同一個 ASIN 可能對應多個 SKU（換版）。
+**Key = ASIN** (not SKU) because a single ASIN may map to multiple SKUs (e.g., version changes).
 
 ```
-月銷量 (H) = Sales 30 days
-FBA Total (J) = FBA Available + FBA Inbound  
+Monthly Sales (H) = Sales 30 days
+FBA Total (J) = FBA Available + FBA Inbound
                      ↑ fulfillable + reserved_fc_transfers + reserved_fc_processing
-FBA Month (K) = FBA Total ÷ 月銷量
+                       + inbound_working + inbound_shipped + inbound_receiving
+FBA Month (K) = FBA Total ÷ Monthly Sales
 
 AWD Total (O) = AWD Available + AWD Inbound − AWD Outbound
-AWD Month (P) = AWD Total ÷ 月銷量
+AWD Month (P) = AWD Total ÷ Monthly Sales
 
-Total Coverage (Q) = (FBA Total + AWD Total) ÷ 月銷量
+Total Coverage (Q) = (FBA Total + AWD Total) ÷ Monthly Sales
 
-美國虛擬庫存 = 美國倉 (us_qty) + 欠數 (pending_qty)      -- 未來可用
-美國虛擬 Month = 美國虛擬庫存 ÷ 月銷量
+US virtual stock = us_qty (on-hand) + pending_qty (ordered, not received)
+US virtual Month = US virtual stock ÷ Monthly Sales
 
-安全庫存門檻 = 月銷量 × 移倉水位（依產品類型）
-    - 一般款: sz_transfer_level_normal
-    - 流量款: sz_transfer_level_hero  
-    - Rocket 🚀: sz_transfer_level_rocket (預設 2.5)
+safety_stock = Monthly Sales × transfer_level (by product type)
+    - Normal:  sz_transfer_level_normal
+    - Hero:    sz_transfer_level_hero
+    - Rocket:  sz_transfer_level_rocket (default 2.5)
 
-美國倉缺口 = max(0, 安全庫存門檻 − 美國虛擬庫存)
+us_gap = max(0, safety_stock − US virtual stock)
 
-移倉數建議 = min(佳樂倉庫存, 美國倉缺口)
-    抑制條件: Total Coverage ≥ 移倉觸發門檻（預設 4.0）→ 移倉 = 0
+transfer_qty = min(JL warehouse stock, us_gap)
+    Suppress: if Total Coverage ≥ transfer trigger (default 4.0) → transfer_qty = 0
 
-建議返單數量 = max(0, 美國倉缺口 − 佳樂倉庫存)
-    抑制條件: Total Coverage ≥ 返單觸發門檻（預設 4.0）→ 返單 = 0
+reorder_qty = max(0, us_gap − JL warehouse stock)
+    Suppress: if Total Coverage ≥ reorder trigger (default 4.0) → reorder_qty = 0
 
-AWD 補貨量:
-    need = awd_target × 月銷量 − AWD Total
-    cap  = 3.0 × 月銷量 − (FBA Total + AWD Total)   -- 總上限 3 個月
+AWD replenishment:
+    need = awd_target × Monthly Sales − AWD Total
+    cap  = 3.0 × Monthly Sales − (FBA Total + AWD Total)   -- overall 3-month cap
     awd_replen = min(need, cap)
 ```
 
-### 三級補貨警示（優先度 🔴 > 🟡 > 🔵）
+### Three-tier Alert System (priority: 🔴 > 🟡 > 🔵)
 
-- 🔴 **需返單**：`reorder_qty > 0`
-- 🟡 **佳樂告急**：`transfer_qty > 0 且 佳樂 − transfer < 安全庫存 × 0.5`
-- 🔵 **已下單待收**：`pending_qty > 0 且 reorder_qty = 0`
+- 🔴 **Reorder Needed**: `reorder_qty > 0`
+- 🟡 **JL Warehouse Critical**: `transfer_qty > 0 AND (JL − transfer) < safety_stock × 0.5`
+- 🔵 **Ordered, Awaiting Receipt**: `pending_qty > 0 AND reorder_qty = 0`
 
-### 產品類型（`sku_config.product_type`）
-- `一般款` / `流量款` / `Rocket` / `Discontinued`（停產 → 不建議返單/移倉/AWD補貨）
+### Product Types (`sku_config.product_type`)
+
+- **Normal** — default replenishment cadence
+- **Hero** — high-traffic products, higher stock levels
+- **Rocket** 🚀 — top priority, aggressive stocking (2.5 month default)
+- **Discontinued** — no reorder / transfer / AWD replenishment triggered
 
 ---
 
-## 主要 API 端點
+## Main API Endpoints
 
 **Inventory (FBA)**
-- `POST /etl/inventory/sync` — 全站 loop 同步
-- `POST /etl/inventory/upload?marketplace_id=US` — 手動上傳 Amazon Manage FBA Inventory CSV（也接受 form field）
-- `POST /etl/inventory/manual-adjust` — 單 SKU 手動修正
-- `POST /etl/inventory/remap-marketplace` — 修正錯站點的 rows
-- `GET  /etl/inventory/debug/{asin_or_sku}` — 診斷單一 ASIN/SKU
+- `POST /etl/inventory/sync` — sync all marketplaces via SP-API
+- `POST /etl/inventory/upload?marketplace_id=US` — manual Amazon Manage FBA Inventory CSV upload (also accepts form field)
+- `POST /etl/inventory/manual-adjust` — single SKU manual correction
+- `POST /etl/inventory/remap-marketplace` — move rows to correct marketplace
+- `GET  /etl/inventory/debug/{asin_or_sku}` — diagnostic query
 
 **AWD** (US only)
-- `POST /etl/awd/sync` — API 同步
-- `POST /etl/awd/upload` — 手動上傳 AWD Excel
-- `POST /etl/awd/report-sync` — 觸發 SP-API AWD Report（權威）+ reconcile
+- `POST /etl/awd/sync` — API sync
+- `POST /etl/awd/upload` — manual AWD Excel upload
+- `POST /etl/awd/report-sync` — trigger SP-API AWD Report (authoritative) + reconcile
 
 **Sales**
-- `POST /etl/sales/sync` — 不傳 marketplace_id → loop 全站 region-level
-- `GET  /etl/sales/marketplace-breakdown` — 診斷各站點分布
-- `POST /etl/sales/purge?marketplace_id=X&since_days=90` — 清除資料
+- `POST /etl/sales/sync` — no `marketplace_id` → loops all regions
+- `GET  /etl/sales/marketplace-breakdown` — diagnostic: per-site distribution
+- `POST /etl/sales/purge?marketplace_id=X&since_days=90` — purge site data
 
-**Orders / Fees / Traffic / Ads**（都支援 loop 全站）
+**Orders / Fees / Traffic / Ads** — all support loop-all mode
 
 **Replenishment**
-- `GET  /replenishment?marketplace_id=US` — Dashboard 主資料
-- `GET  /replenishment/daily-alert` — 每日 email 警示（n8n 呼叫）
+- `GET  /replenishment?marketplace_id=US` — dashboard main data
+- `GET  /replenishment/daily-alert` — daily email alert data (called by n8n)
 
 **Health**
-- `GET  /etl/health/summary?marketplace_id=US` — 各 pipeline 狀態
-- `GET  /etl/health/anomalies?marketplace_id=US` — 資料異常清單
+- `GET  /etl/health/summary?marketplace_id=US` — per-pipeline status
+- `GET  /etl/health/anomalies?marketplace_id=US` — recent data anomalies
 
 **SZ Warehouse**
-- `POST /etl/sz/upload?replace=true` — 上傳深圳倉 template
-- `GET  /etl/sz/download-template` — 下載空白 template
+- `POST /etl/sz/upload?replace=true` — upload Shenzhen warehouse template
+- `GET  /etl/sz/download-template` — download blank template
 
 **Catalog (Anchor)**
-- `POST /etl/catalog/upload` — 上傳 MAGEASY Anchor xlsx
+- `POST /etl/catalog/upload` — upload MAGEASY Anchor xlsx
 
 ---
 
-## Dashboard（`etl/static/dashboard.html`）
+## Dashboard (`etl/static/dashboard.html`)
 
-單一 HTML file，開在 `http://localhost:8000/dashboard`。
+Single HTML file served at `http://localhost:8000/dashboard`.
 
-**主要 panel：**
-1. **站點切換下拉**（🇺🇸 US / 🇬🇧 UK / 🇩🇪 DE）— 切換時 loadData + loadHealthPanels
-2. **上傳工具區** — Anchor / SZ / AWD / FBA CSV
-   - FBA 上傳有**獨立紅框站點選擇器**（不跟 filter 綁定，防止上錯站）
-   - 每次上傳前 confirm 對話框顯示目標站點
-3. **資料串接健康度** — 每個 pipeline 的最新同步、覆蓋率、異常
-4. **資料異常** panel — 顯示過去 24h 的 sync_anomalies
-5. **補貨主表** — 每 SKU 一列，含返單建議、移倉建議、AWD 補貨、警示等
+**Main panels:**
+1. **Marketplace filter dropdown** (🇺🇸 US / 🇬🇧 UK / 🇩🇪 DE) — switching triggers `loadData` + `loadHealthPanels`
+2. **Upload tools** — Anchor / SZ / AWD / FBA CSV
+   - FBA upload has **independent red-bordered marketplace selector** (decoupled from filter)
+   - Every upload prompts a confirmation dialog showing target site
+3. **Sync health panel** — freshness, coverage, anomalies per pipeline
+4. **Anomaly panel** — past 24h `sync_anomalies` events
+5. **Replenishment master table** — one row per SKU with reorder / transfer / AWD suggestions and alerts
 
-**Controls（浮動齒輪按鈕）** — 動態調整水位參數，寫入 `replenishment_controls` 表。
+**Controls (floating gear button)** — adjust replenishment thresholds; persists to `replenishment_controls` table.
 
 ---
 
-## n8n Workflows（`n8n/*.json`）
+## n8n Workflows (`n8n/*.json`)
 
-排程與檔案：
-
-| Workflow | Cron | 說明 |
+| Workflow | Cron | Purpose |
 |---|---|---|
-| `awd_replenishment_workflow.json` | `0 10 * * *` (10:00 UTC = 台灣 18:00) | 主 ETL：FBA + AWD + Orders + Sales + Alert |
-| `workflow_orders.json` | 每 4 小時 | 訂單同步 |
-| `workflow_finance.json` | `0 23 * * *` (23:00 UTC) | Finance 同步 |
-| `workflow_ads.json` | `0 0 * * *` | Ads 同步 |
-| `workflow_fees.json` | `0 4 2 * *` | 每月 2 號 Fees 同步 |
-| `workflow_traffic.json` | `0 3 2 * *` | 每月 2 號 Traffic |
-| `workflow_traffic_mtd.json` | `0 9 * * *` | 每日 MTD Traffic |
-| `workflow_awd_report.json` | `0 3 * * *` | AWD Report reconcile |
+| `awd_replenishment_workflow.json` | `0 10 * * *` (10:00 UTC = 18:00 Taiwan) | Main ETL: FBA + AWD + Orders + Sales + Alert |
+| `workflow_orders.json` | Every 4 hours | Orders sync |
+| `workflow_finance.json` | `0 23 * * *` (23:00 UTC) | Finance sync |
+| `workflow_ads.json` | `0 0 * * *` | Ads sync |
+| `workflow_fees.json` | `0 4 2 * *` | Monthly Fees (2nd of month) |
+| `workflow_traffic.json` | `0 3 2 * *` | Monthly Traffic (2nd of month) |
+| `workflow_traffic_mtd.json` | `0 9 * * *` | Daily month-to-date Traffic |
+| `workflow_awd_report.json` | `0 3 * * *` | AWD authoritative report reconcile |
 
-**⚠️ 重要**：n8n 端多個 workflow 都不要 hardcode marketplace_id（除非明確要單站）。後端會自動 loop。
+**⚠️ Important:** Most n8n workflow HTTP nodes should NOT hard-code `marketplace_id` (unless explicitly single-site). The backend auto-loops all sites.
 
-**Amazon 24h Rate Limit：** 每個 (report type × marketplace) 每 24 小時只能成功呼叫 1 次。今天 10:00 UTC 成功 → 明天 10:00 UTC 之後才能再跑。
+**Amazon 24h Rate Limit:** Each (report type × marketplace) can only succeed once per 24-hour window. If today at 10:00 UTC succeeded, next successful run must wait until after 10:00 UTC tomorrow.
 
 ---
 
-## 環境變數（`.env`）
+## Environment Variables (`.env`)
 
 ```
 # SP-API
 SP_API_REFRESH_TOKEN=...              # NA region
 SP_API_REFRESH_TOKEN_EU=...           # EU region
-SP_API_REFRESH_TOKEN_FE=              # FE region (未用)
+SP_API_REFRESH_TOKEN_FE=              # FE region (unused)
 SP_API_CLIENT_ID=amzn1.application-oa2-client.<your_client_id>
 SP_API_CLIENT_SECRET=amzn1.oa2-cs.v1.<your_client_secret>
 SP_API_MARKETPLACE_IDS=["ATVPDKIKX0DER","A1F83G8C2ARO7P","A1PA6795UKMFR9"]
@@ -229,27 +235,27 @@ N8N_USER=...
 N8N_PASSWORD=...
 ```
 
-**⚠️ `.env` 千萬不能 push 到 GitHub。** 上 GCP 部署改用 Secret Manager。
+**⚠️ Never push `.env` to GitHub.** Use Google Secret Manager for GCP deployment.
 
 ---
 
-## 常見操作
+## Common Operations
 
-**啟停：**
+**Start / Stop:**
 ```bash
-docker compose up -d     # 啟動
-docker compose down      # 停（保留 volume 資料）
-docker compose restart etl   # 重啟 API（不重載 .env）
-docker compose down && docker compose up -d   # 完整重啟（會重載 .env）
+docker compose up -d              # Start
+docker compose down               # Stop (data preserved)
+docker compose restart etl        # Restart API (does NOT reload .env)
+docker compose down && docker compose up -d   # Full restart (reloads .env)
 ```
 
-**看 log：**
+**View logs:**
 ```bash
 docker compose logs -f etl
 docker compose logs --tail 100 etl | grep -i error
 ```
 
-**DB 查詢（read-only，不撞 FastAPI lock）：**
+**Read-only DB query (avoids FastAPI lock):**
 ```bash
 docker compose exec etl python3 -c "
 import duckdb
@@ -258,94 +264,94 @@ c = duckdb.connect('/data/sp_api.duckdb', read_only=True)
 "
 ```
 
-**Backup DB：** 直接 copy `sp_api.duckdb` 檔（記得先停 API 才能 copy）。
+**Backup DB:** Copy `sp_api.duckdb` file directly (stop API before copying).
 
 ---
 
-## Deployment 到 GCP
+## Deployment to GCP
 
-**Checklist：**
-1. Compute Engine 或 Cloud Run（推薦 CE，因為 DuckDB 需要 persistent volume）
-2. `.env` → Google Secret Manager
-3. `/data` 掛 Persistent Disk（重要：DuckDB 檔）
-4. n8n 也部署一份（可用 Docker or GCP hosted）
-5. 開通 outbound firewall 到 `sellingpartnerapi-*.amazon.com`
-6. 每次上線後：跑一次 `docker compose exec etl python3 -c "..."` 確認 DB migration 都跑完
-
----
-
-## 已知重要架構決策紀錄
-
-1. **`inventory` PK 加 marketplace_id**（否則 SP-API loop 會互相覆蓋）
-2. **FBA CSV upload 支援 query + form marketplace_id**（防呆）
-3. **Sales 依 currency 分 UK/DE**（Amazon Sales Report 沒 sales-channel 欄）
-4. **AWD 只在 US 站顯示**（`awd_by_asin` CTE 有 marketplace 守門）
-5. **Health / Anomaly 依 marketplace 分**（P1-2, P1-3, P1-4）
-6. **Fees / Traffic router loop 全站**（P1-6, P1-7）
-7. **Sales sync region-level + currency 分流**（P0-7）
+**Checklist:**
+1. Compute Engine (recommended over Cloud Run — DuckDB needs persistent volume)
+2. Move `.env` to Google Secret Manager
+3. Mount Persistent Disk at `/data` (critical for DuckDB file)
+4. Deploy n8n separately (Docker or GCP-hosted)
+5. Open outbound firewall to `sellingpartnerapi-*.amazon.com`
+6. After deploy: verify DB migrations ran (`docker compose exec etl python3 -c "..."` to check schema)
 
 ---
 
-## 待辦（P1 尚未做完）
+## Architectural Decisions Log
 
-- P1-5：`ads_sponsored_products` 加 marketplace_id 欄（等要跑 UK/DE Ads）
-- P1-9：Ads n8n workflow 加 loop（跟 P1-5 綁）
+1. **`inventory` PK adds marketplace_id** — prevents SP-API loop from overwriting rows
+2. **FBA CSV upload accepts marketplace_id via query + form field** — safety net for accidental site mismatch
+3. **Sales split by currency (UK/DE)** — Amazon Sales Report has no sales-channel column
+4. **AWD only shows in US site** — `awd_by_asin` CTE has marketplace guard
+5. **Health / Anomaly split by marketplace** (P1-2, P1-3, P1-4)
+6. **Fees / Traffic router loops all sites** (P1-6, P1-7)
+7. **Sales sync region-level + currency split** (P0-7)
 
 ---
 
-## 資料流全景
+## Pending Work (P1 remaining)
+
+- **P1-5**: Add `marketplace_id` column to `ads_sponsored_products` (needed before running UK/DE Ads)
+- **P1-9**: Add marketplace loop to Ads n8n workflow (pair with P1-5)
+
+---
+
+## Data Flow Overview
 
 ```
 Amazon SP-API ─┐
-Amazon Ads API ─┼→ n8n (排程) → FastAPI (/etl/*/sync) → DuckDB
-使用者手動上傳 ─┘                                          │
-                                                          ▼
-                                              FastAPI (/replenishment)
-                                                          │
-                                                          ▼
-                                              Dashboard HTML
-                                                          │
-                                              (使用者操作 Controls)
-                                                          │
-                                                          ▼
-                                              replenishment_controls 表
-                                              → 影響下次計算
+Amazon Ads API ─┼→ n8n (schedule) → FastAPI (/etl/*/sync) → DuckDB
+Manual upload ──┘                                             │
+                                                              ▼
+                                             FastAPI (/replenishment)
+                                                              │
+                                                              ▼
+                                             Dashboard HTML (single page)
+                                                              │
+                                                 (user tweaks Controls)
+                                                              │
+                                                              ▼
+                                             replenishment_controls table
+                                                → feeds next computation
 ```
 
 ---
 
-## Repo 結構
+## Repository Structure
 
 ```
 etl/
   main.py                    # FastAPI app
   core/
-    config.py                # Pydantic Settings + region_for / refresh_token_for
+    config.py                # Pydantic Settings (region_for, refresh_token_for)
     database.py              # DuckDB schema + migrations
-    sp_api_client.py         # SP-API 客戶端（region-aware）
+    sp_api_client.py         # Region-aware SP-API client
     db_meta.py               # SQLite pipeline runs
   routers/
     inventory.py             # FBA endpoints
     sales.py / orders.py / fees.py / traffic.py / ads.py
-    awd_upload.py            # AWD Excel 上傳
-    sz_warehouse.py          # 深圳倉 template
-    catalog.py               # MAGEASY Anchor
-    replenishment.py         # Dashboard 主資料
-    health.py                # 健康度 / 異常
-    controls.py              # 補貨參數
+    awd_upload.py            # AWD Excel upload
+    sz_warehouse.py          # Shenzhen warehouse template
+    catalog.py               # MAGEASY Anchor upload
+    replenishment.py         # Dashboard main data
+    health.py                # Health / anomalies
+    controls.py              # Replenishment thresholds
   services/
     inventory_service.py     # FBA sync
     awd_service.py           # AWD sync
-    awd_report_service.py    # AWD Report reconcile
-    sales_service.py         # Sales region-level sync + currency 分流
+    awd_report_service.py    # AWD authoritative report + reconcile
+    sales_service.py         # Region-level sync + currency split
     orders_service.py / fees_service.py / traffic_service.py / ads_service.py
-    replenishment_service.py # 補貨計算主邏輯（大 CTE 查詢）
-    anomaly_detector.py      # 資料異常偵測
-    base_service.py          # BaseService（start_run/finish_run/fail_run）
+    replenishment_service.py # Main computation (big CTE query)
+    anomaly_detector.py      # Data drift detection
+    base_service.py          # BaseService (start_run / finish_run / fail_run)
   static/
-    dashboard.html           # 單頁 Dashboard
+    dashboard.html           # Single-page dashboard
 
 n8n/                         # n8n workflow JSON files
-.env                         # 環境變數（不 push GitHub）
+.env                         # Environment variables (never commit)
 docker-compose.yml
 ```
