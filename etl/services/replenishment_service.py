@@ -175,21 +175,47 @@ class ReplenishmentService:
                 -- ⚠️ 關鍵：MAX(snapshot_date) 必須依當前 marketplace 限縮
                 -- 否則 UK/DE 同步到 09-17、US 只有手動上傳 09-16 時，
                 -- 用「全站最大 date=09-17」查 US 資料會得到 0
+                -- ⚠️ FBA 庫存去重策略（雙重防護）：
+                -- Amazon FBA Inventory API 有兩種情況會造成同 ASIN 多筆重複：
+                -- 1) Amazon 自動 alias SKU（pattern：`XX-XXXX-XXXX`）→ regex 過濾
+                -- 2) 版本換代殘留舊 SKU（例：B0CBBL9NR7 有 MPHIPH371KH25 新版 +
+                --    MPHIPH143KH23 舊版，兩個都 147 → SUM 誤算 294）
+                --
+                -- 策略：Anchor-preferred
+                --  若 ASIN 底下有任何 SKU 存在於 Anchor → 只算 Anchor-matched
+                --  若都沒有（Anchor 尚未登記此 ASIN 的新版 SKU）→ 算所有非 alias
                 fba_by_asin AS (
+                    WITH filtered AS (
+                        SELECT i.*,
+                               CASE WHEN pc.sku IS NOT NULL AND pc.asin = i.asin
+                                    THEN 1 ELSE 0 END AS in_anchor
+                        FROM inventory i
+                        LEFT JOIN product_catalog pc ON pc.sku = i.sku
+                        WHERE i.snapshot_date = (
+                                  SELECT MAX(snapshot_date) FROM inventory
+                                  WHERE marketplace_id = ?
+                              )
+                          AND i.marketplace_id = ?
+                          AND i.asin IS NOT NULL AND i.asin != ''
+                          -- 過濾 Amazon auto-generated alias SKU
+                          AND NOT regexp_matches(i.sku, '^[A-Z]{2}-[A-Z0-9]{4}-[A-Z0-9]{4}$')
+                    ),
+                    anchor_flag AS (
+                        SELECT asin, MAX(in_anchor) AS has_anchor
+                        FROM filtered GROUP BY asin
+                    )
                     SELECT
-                        asin,
-                        SUM(fulfillable_quantity
-                            + COALESCE(reserved_fc_transfers, 0)
-                            + COALESCE(reserved_fc_processing, 0))                AS fba_available,
-                        SUM(inbound_working + inbound_shipped + inbound_receiving) AS fba_inbound
-                    FROM inventory
-                    WHERE snapshot_date = (
-                              SELECT MAX(snapshot_date) FROM inventory
-                              WHERE marketplace_id = ?
-                          )
-                      AND marketplace_id = ?
-                      AND asin IS NOT NULL AND asin != ''
-                    GROUP BY asin
+                        f.asin,
+                        SUM(f.fulfillable_quantity
+                            + COALESCE(f.reserved_fc_transfers, 0)
+                            + COALESCE(f.reserved_fc_processing, 0))              AS fba_available,
+                        SUM(f.inbound_working + f.inbound_shipped + f.inbound_receiving) AS fba_inbound
+                    FROM filtered f
+                    JOIN anchor_flag ag ON ag.asin = f.asin
+                    -- 有 Anchor 對應時只算 in_anchor=1；沒 Anchor 對應時算所有
+                    WHERE (ag.has_anchor = 1 AND f.in_anchor = 1)
+                       OR (ag.has_anchor = 0)
+                    GROUP BY f.asin
                 ),
 
                 -- ── AWD by ASIN（透過 sku_asin 轉換再加總）──────────────────────
