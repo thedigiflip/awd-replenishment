@@ -365,13 +365,12 @@ class ReplenishmentService:
 
         awd_avail   = float(r["awd_available"])         # L
         awd_inbound = float(r["awd_inbound"])           # M
-        awd_out     = float(r["awd_outbound"])          # N
-        # AWD Total (O) — 淨庫存 = Available + Inbound − Outbound
-        # 注意：Amazon 資料時序 lag 可能讓 outbound > available+inbound（例如貨已離開
-        # AWD 但 available 尚未更新）。這時公式會算出負值，讓 AWD Month 也變負，
-        # 進而扭曲 Total Coverage。用 max(0, ...) 做地板，避免視覺上出現不合理的
-        # 負庫存。實際上這些移轉中的貨已計入 FBA Inbound，不會遺漏。
-        awd_total   = max(0.0, awd_avail + awd_inbound - awd_out)
+        awd_out     = float(r["awd_outbound"])          # N  — 資訊欄，不列入計算
+        # AWD Total (O) = Available + Inbound
+        # Amazon 資料模型：outbound units 已從 awd_available 扣除（實體離開 AWD 倉），
+        # 並自動出現在 FBA inbound_shipped。若再扣一次會重複扣減、造成 Total Coverage
+        # 偏低或負值。Outbound 保留為獨立顯示欄位，供業務追蹤「AWD → FBA 移轉中」的量。
+        awd_total   = awd_avail + awd_inbound
 
         # SZ 兩倉（新版）+ 欠數 + 下單日期 + 工廠回覆交期
         us_qty      = float(r.get("us_qty") or 0)        # 美國倉現貨

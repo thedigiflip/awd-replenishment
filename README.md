@@ -94,10 +94,13 @@ FBA Total (J) = FBA Available + FBA Inbound
                        + inbound_working + inbound_shipped + inbound_receiving
 FBA Month (K) = FBA Total ÷ Monthly Sales
 
-AWD Total (O) = max(0, AWD Available + AWD Inbound − AWD Outbound)
-                  ↑ Floor at 0 — Amazon data-timing lag can make the raw formula
-                    go negative (outbound reported before available refresh).
-                    Units in transit are already counted in FBA Inbound anyway.
+AWD Total (O) = AWD Available + AWD Inbound
+                  ↑ Outbound is NOT subtracted. In Amazon's data model,
+                    outbound units are already removed from awd_available
+                    and automatically appear in FBA inbound_shipped.
+                    Subtracting them again would double-count the deduction.
+                    (awd_outbound is kept as an info column for tracking
+                     "AWD → FBA in-transit" quantities.)
 AWD Month (P) = AWD Total ÷ Monthly Sales
 
 Total Coverage (Q) = (FBA Total + AWD Total) ÷ Monthly Sales
