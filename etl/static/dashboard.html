@@ -383,8 +383,8 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
 
     <!-- SZ Warehouse -->
     <div class="upload-card">
-      <div class="title">🏪 深圳倉庫（美國倉 + 佳樂倉 + Unit/Case）</div>
-      <div class="hint">欄位: SKU / 美國倉庫存 / 佳樂倉庫存 / Unit/Case</div>
+      <div class="title">🏪 深圳倉庫（佳樂倉 + 美國倉 + Unit/Case）</div>
+      <div class="hint">欄位: SKU / 佳樂倉庫存 / 美國倉庫存 / Unit/Case</div>
       <div class="upload-row-inner">
         <button class="btn btn-sm" style="background:#5C6BC0;color:#fff" onclick="downloadSzTemplate()">⬇️ 下載 Template</button>
         <input type="file" id="sz-file" accept=".xlsx,.xls,.csv" style="font-size:10px;flex:1">
@@ -513,7 +513,7 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
           <th colspan="4" class="g-fba">FBA</th>
           <th colspan="5" class="g-awd">AWD</th>
           <th colspan="2" class="g-cov">Coverage</th>
-          <th colspan="12" class="g-sz">深圳倉庫（美國倉 + 欠數 + 佳樂倉）</th>
+          <th colspan="12" class="g-sz">深圳倉庫（佳樂倉 + 美國倉 + 欠數）</th>
           <th colspan="5" class="g-reo">返單計畫</th>
           <th colspan="4" class="g-rep">AWD Replenishment</th>
         </tr>
@@ -849,8 +849,8 @@ const COLS = [
   {k:'cap_alert',        h:'5M Cap 警示',              w:78,  a:'center', r:'capTag'},
   // ── 深圳倉庫（新版：美國倉 + 欠數 + 佳樂倉）─────────────────────────
   {k:'safety_stock',     h:'安全庫存\n門檻',            w:65,  a:'center', r:'safetyCell'},
-  {k:'us_qty',           h:'美國倉',                   w:65,  a:'center', fmt:0},
   {k:'jl_qty',           h:'佳樂倉',                   w:65,  a:'center', fmt:0},
+  {k:'us_qty',           h:'美國倉',                   w:65,  a:'center', fmt:0},
   {k:'pending_qty',      h:'欠數\n(已下單)',            w:65,  a:'center', r:'pendingCell'},
   {k:'order_date',       h:'下單日期',                  w:78,  a:'center', r:'orderDateOnlyCell'},
   {k:'expected_date',    h:'約定交期',                w:110, a:'center', r:'expectedDateCell'},
