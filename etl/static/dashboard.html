@@ -842,8 +842,10 @@ const COLS = [
   {k:'fba_month',        h:'FBA Total\nMonth',         w:58,  a:'center', r:'fbaMonthCell'},
   {k:'awd_available',    h:'AWD\nAvailable',           w:65,  a:'center', fmt:0},
   {k:'awd_inbound',      h:'AWD\nInbound',             w:60,  a:'center', fmt:0},
-  {k:'awd_outbound',     h:'AWD\nOutbound',            w:60,  a:'center', fmt:0},
-  {k:'awd_total',        h:'AWD Total\n(Avail+In-Out)',w:65,  a:'center', fmt:0},
+  {k:'awd_outbound',     h:'AWD\nOutbound',            w:60,  a:'center', fmt:0,
+      tip:'移轉往 FBA 的量（Amazon 會自動將其計入 FBA Inbound）'},
+  {k:'awd_total',        h:'AWD Total\n(max 0, Av+In−Out)',w:78,  a:'center', fmt:0,
+      tip:'AWD Total = max(0, Available + Inbound − Outbound)\n最低 0，避免 Amazon 資料時序 lag 造成負值扭曲 Total Coverage'},
   {k:'awd_month',        h:'AWD Month',                w:58,  a:'center', r:'awdMonthCell'},
   {k:'total_coverage',   h:'Total Coverage\nFBA+AWD(M)',w:70, a:'center', r:'covCell'},
   {k:'cap_alert',        h:'5M Cap 警示',              w:78,  a:'center', r:'capTag'},
@@ -879,6 +881,7 @@ const COLS = [
   COLS.forEach((c,i) => {
     const th = document.createElement('th');
     th.innerHTML = c.h.replace(/\n/g,'<br>');
+    if (c.tip) th.title = c.tip;   // hover 顯示欄位說明
     th.dataset.i = i;
     th.addEventListener('click', () => {
       if(sortKey===c.k) sortAsc=!sortAsc; else{sortKey=c.k;sortAsc=true;}
