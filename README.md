@@ -1,4 +1,4 @@
-# MAGEASY Replenishment & Advertising Dashboard
+# Amazon Replenishment Dashboard
 
 Multi-marketplace Amazon FBA inventory, sales, and advertising management system supporting US / UK / DE with automated daily sync, inventory analytics, replenishment recommendations, and advertising performance tracking.
 
