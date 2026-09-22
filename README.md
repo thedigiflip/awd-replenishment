@@ -94,7 +94,10 @@ FBA Total (J) = FBA Available + FBA Inbound
                        + inbound_working + inbound_shipped + inbound_receiving
 FBA Month (K) = FBA Total ÷ Monthly Sales
 
-AWD Total (O) = AWD Available + AWD Inbound − AWD Outbound
+AWD Total (O) = max(0, AWD Available + AWD Inbound − AWD Outbound)
+                  ↑ Floor at 0 — Amazon data-timing lag can make the raw formula
+                    go negative (outbound reported before available refresh).
+                    Units in transit are already counted in FBA Inbound anyway.
 AWD Month (P) = AWD Total ÷ Monthly Sales
 
 Total Coverage (Q) = (FBA Total + AWD Total) ÷ Monthly Sales
