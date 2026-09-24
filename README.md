@@ -199,16 +199,20 @@ Single HTML file served at `http://localhost:8000/dashboard`.
 
 ## n8n Workflows (`n8n/*.json`)
 
-| Workflow | Cron | Purpose |
-|---|---|---|
-| `awd_replenishment_workflow.json` | `0 10 * * *` (10:00 UTC = 18:00 Taiwan) | Main ETL: FBA + AWD + Orders + Sales + Alert |
-| `workflow_orders.json` | Every 4 hours | Orders sync |
-| `workflow_finance.json` | `0 23 * * *` (23:00 UTC) | Finance sync |
-| `workflow_ads.json` | `0 0 * * *` | Ads sync |
-| `workflow_fees.json` | `0 4 2 * *` | Monthly Fees (2nd of month) |
-| `workflow_traffic.json` | `0 3 2 * *` | Monthly Traffic (2nd of month) |
-| `workflow_traffic_mtd.json` | `0 9 * * *` | Daily month-to-date Traffic |
-| `workflow_awd_report.json` | `0 3 * * *` | AWD authoritative report reconcile |
+All crons run in **UTC** (each workflow sets `settings.timezone = "UTC"`).
+
+| Workflow | Cron (UTC) | Taiwan time | Purpose |
+|---|---|---|---|
+| `awd_replenishment_workflow.json` | `0 10 * * *` | 18:00 daily | Main ETL: FBA + AWD + Orders + Sales + Alert |
+| `workflow_awd_report.json` | `0 3 * * *` | 11:00 daily | AWD authoritative report reconcile |
+| `workflow_traffic_mtd.json` | `0 9 * * *` | 17:00 daily | Month-to-date Traffic |
+| `workflow_traffic.json` | `0 3 2 * *` | 11:00 on the 2nd | Monthly Traffic |
+| `workflow_fees.json` | `0 4 2 * *` | 12:00 on the 2nd | Monthly FBA Fees (feeds profit calc on Traffic tab) |
+| `workflow_traffic_backfill.json` | manual only | — | One-time historical Traffic backfill |
+
+Removed (no consumer in the dashboard): Ads sync, Finance sync, 4-hourly Orders sync (Orders still runs once daily inside the main ETL). Backend routers remain, so they can be re-added if ads/finance analysis is built later.
+
+**Gmail alert nodes** in the main ETL and AWD Report workflows are currently **disabled** until Gmail OAuth is configured (requires HTTPS domain).
 
 **⚠️ Important:** Most n8n workflow HTTP nodes should NOT hard-code `marketplace_id` (unless explicitly single-site). The backend auto-loops all sites.
 
