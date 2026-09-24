@@ -213,10 +213,5 @@
   "settings": {
     "executionOrder": "v1",
     "timezone": "UTC"
-  },
-  "tags": [
-    {
-      "name": "fees"
-    }
-  ]
+  }
 }

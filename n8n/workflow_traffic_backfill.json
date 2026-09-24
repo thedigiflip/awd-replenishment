@@ -160,12 +160,6 @@
     "timezone": "UTC"
   },
   "staticData": null,
-  "tags": [
-    "sp-api",
-    "traffic",
-    "backfill",
-    "one-time"
-  ],
   "triggerCount": 0,
   "updatedAt": "2026-05-01T00:00:00.000Z",
   "versionId": "1"

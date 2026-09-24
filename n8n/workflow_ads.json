@@ -258,10 +258,5 @@
     "executionOrder": "v1",
     "saveManualExecutions": true,
     "timezone": "UTC"
-  },
-  "tags": [
-    "sp-api",
-    "ads",
-    "etl"
-  ]
+  }
 }

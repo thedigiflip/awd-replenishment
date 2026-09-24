@@ -258,10 +258,5 @@
     "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": "",
     "timezone": "UTC"
-  },
-  "tags": [
-    "sp-api",
-    "orders",
-    "etl"
-  ]
+  }
 }
