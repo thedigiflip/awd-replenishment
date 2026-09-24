@@ -16,7 +16,10 @@
       "name": "Monthly 2nd @ 03:00 UTC",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "notes": "每月 2 日 03:00 UTC 觸發（1 日資料需等 Amazon 跑完當月結算）"
     },
     {
@@ -37,7 +40,10 @@
       "name": "Set Params",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [460, 300],
+      "position": [
+        460,
+        300
+      ],
       "notes": "marketplace_id: US=ATVPDKIKX0DER / DE=A1PA6795UKMFR9 / UK=A1F83G8C2ARO7P"
     },
     {
@@ -64,7 +70,10 @@
       "name": "Trigger Traffic Sync",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [680, 300],
+      "position": [
+        680,
+        300
+      ],
       "notes": "日期留空 → ETL 自動使用上個完整月份"
     },
     {
@@ -76,7 +85,10 @@
       "name": "Wait 15 min",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [900, 300],
+      "position": [
+        900,
+        300
+      ],
       "notes": "SP-API 報告通常需要 5–15 分鐘，等待後再查詢狀態"
     },
     {
@@ -90,7 +102,10 @@
       "name": "Check Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 300],
+      "position": [
+        1120,
+        300
+      ],
       "notes": "GET /etl/traffic/status — 回傳最新 run 的狀態"
     },
     {
@@ -120,7 +135,10 @@
       "name": "Success?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1340, 300]
+      "position": [
+        1340,
+        300
+      ]
     },
     {
       "parameters": {
@@ -133,7 +151,10 @@
       "name": "Get Row Count",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1560, 200],
+      "position": [
+        1560,
+        200
+      ],
       "notes": "成功後查詢 sales_traffic 總筆數（可用於通知或 log）"
     },
     {
@@ -144,7 +165,10 @@
       "name": "Throw Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 400],
+      "position": [
+        1560,
+        400
+      ],
       "notes": "狀態非 success 時拋出錯誤，n8n 會記錄失敗並可設定通知"
     }
   ],
@@ -224,10 +248,15 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "UTC"
   },
   "staticData": null,
-  "tags": ["sp-api", "traffic", "business-report"],
+  "tags": [
+    "sp-api",
+    "traffic",
+    "business-report"
+  ],
   "triggerCount": 0,
   "updatedAt": "2026-05-01T00:00:00.000Z",
   "versionId": "1"

@@ -16,7 +16,10 @@
       "name": "Daily 7AM JST (23:00 UTC)",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -36,7 +39,10 @@
       "name": "Set Params",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -62,7 +68,10 @@
       "name": "Trigger Finance Sync",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
@@ -73,7 +82,10 @@
       "name": "Wait 150s",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [900, 300],
+      "position": [
+        900,
+        300
+      ],
       "webhookId": "finance-wait"
     },
     {
@@ -86,7 +98,10 @@
       "name": "Check Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1120, 300]
+      "position": [
+        1120,
+        300
+      ]
     },
     {
       "parameters": {
@@ -115,7 +130,10 @@
       "name": "Success?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1340, 300]
+      "position": [
+        1340,
+        300
+      ]
     },
     {
       "parameters": {},
@@ -123,7 +141,10 @@
       "name": "Done ✅",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1560, 200]
+      "position": [
+        1560,
+        200
+      ]
     },
     {
       "parameters": {
@@ -143,36 +164,96 @@
       "name": "Format Error",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1560, 420]
+      "position": [
+        1560,
+        420
+      ]
     }
   ],
   "connections": {
     "Daily 7AM JST (23:00 UTC)": {
-      "main": [[{"node": "Set Params", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Set Params",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Set Params": {
-      "main": [[{"node": "Trigger Finance Sync", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Trigger Finance Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Trigger Finance Sync": {
-      "main": [[{"node": "Wait 150s", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Wait 150s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Wait 150s": {
-      "main": [[{"node": "Check Status", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Check Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Check Status": {
-      "main": [[{"node": "Success?", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Success?": {
       "main": [
-        [{"node": "Done ✅", "type": "main", "index": 0}],
-        [{"node": "Format Error", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Done ✅",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1",
-    "saveManualExecutions": true
+    "saveManualExecutions": true,
+    "timezone": "UTC"
   },
-  "tags": ["sp-api", "finance", "etl"]
+  "tags": [
+    "sp-api",
+    "finance",
+    "etl"
+  ]
 }

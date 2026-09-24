@@ -329,17 +329,6 @@
         ]
       ]
     },
-    "⏰ 每日 06:00 UTC（台灣 14:00）": {
-      "main": [
-        [
-          {
-            "node": "① FBA 庫存同步",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "① FBA 庫存同步": {
       "main": [
         [
@@ -489,13 +478,25 @@
           }
         ]
       ]
+    },
+    "⏰ 每日 10:00 UTC（台灣 18:00）": {
+      "main": [
+        [
+          {
+            "node": "① FBA 庫存同步",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
     "executionOrder": "v1",
     "saveManualExecutions": true,
     "callerPolicy": "workflowsFromSameOwner",
-    "errorWorkflow": ""
+    "errorWorkflow": "",
+    "timezone": "UTC"
   },
   "staticData": null,
   "meta": {

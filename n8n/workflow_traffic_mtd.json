@@ -16,7 +16,10 @@
       "name": "Every Day 09:00 UTC",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -30,7 +33,10 @@
       "name": "Trigger MTD Sync",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -41,7 +47,10 @@
       "name": "Wait 60s",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [680, 300],
+      "position": [
+        680,
+        300
+      ],
       "webhookId": "mtd-wait-1"
     },
     {
@@ -53,7 +62,10 @@
       "name": "Poll Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
@@ -82,7 +94,10 @@
       "name": "Done?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1120, 300]
+      "position": [
+        1120,
+        300
+      ]
     },
     {
       "parameters": {
@@ -93,7 +108,10 @@
       "name": "Wait 60s (retry)",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [1120, 480],
+      "position": [
+        1120,
+        480
+      ],
       "webhookId": "mtd-wait-2"
     },
     {
@@ -112,44 +130,94 @@
       "name": "Log Result",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1340, 300]
+      "position": [
+        1340,
+        300
+      ]
     }
   ],
   "connections": {
     "Every Day 09:00 UTC": {
       "main": [
-        [{ "node": "Trigger MTD Sync", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Trigger MTD Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Trigger MTD Sync": {
       "main": [
-        [{ "node": "Wait 60s", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Wait 60s",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Wait 60s": {
       "main": [
-        [{ "node": "Poll Status", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Poll Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Poll Status": {
       "main": [
-        [{ "node": "Done?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Done?": {
       "main": [
-        [{ "node": "Log Result", "type": "main", "index": 0 }],
-        [{ "node": "Wait 60s (retry)", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Log Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 60s (retry)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Wait 60s (retry)": {
       "main": [
-        [{ "node": "Poll Status", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Poll Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "UTC"
   },
-  "tags": [{ "name": "traffic" }]
+  "tags": [
+    {
+      "name": "traffic"
+    }
+  ]
 }

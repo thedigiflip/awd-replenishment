@@ -7,7 +7,10 @@
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "notes": "手動觸發 — 在 n8n UI 點「Test workflow」執行"
     },
     {
@@ -40,7 +43,10 @@
       "name": "Set Params",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [460, 300],
+      "position": [
+        460,
+        300
+      ],
       "notes": "✏️ 修改這裡的參數：\n- start_month: 起始月份 YYYY-MM\n- end_month: 結束月份 YYYY-MM（留空 = 上個月）\n- marketplace_id: US=ATVPDKIKX0DER / DE=A1PA6795UKMFR9 / UK=A1F83G8C2ARO7P"
     },
     {
@@ -51,7 +57,10 @@
       "name": "Build Request Body",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300],
+      "position": [
+        680,
+        300
+      ],
       "notes": "end_month 為空時自動省略，ETL 會使用上個完整月份作為結束點"
     },
     {
@@ -79,7 +88,10 @@
       "name": "Trigger Backfill",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 300],
+      "position": [
+        900,
+        300
+      ],
       "notes": "POST /etl/traffic/backfill — 立即回傳，ETL 在背景逐月處理"
     },
     {
@@ -90,7 +102,10 @@
       "name": "Log Summary",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 300],
+      "position": [
+        1120,
+        300
+      ],
       "notes": "在 n8n execution log 顯示啟動摘要與監控 URL"
     }
   ],
@@ -141,10 +156,16 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "UTC"
   },
   "staticData": null,
-  "tags": ["sp-api", "traffic", "backfill", "one-time"],
+  "tags": [
+    "sp-api",
+    "traffic",
+    "backfill",
+    "one-time"
+  ],
   "triggerCount": 0,
   "updatedAt": "2026-05-01T00:00:00.000Z",
   "versionId": "1"

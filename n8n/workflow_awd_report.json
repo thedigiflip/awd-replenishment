@@ -16,7 +16,10 @@
       "name": "每天 03:00 UTC",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
-      "position": [200, 400]
+      "position": [
+        200,
+        400
+      ]
     },
     {
       "parameters": {
@@ -37,7 +40,10 @@
       "name": "觸發 AWD Report",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [400, 400]
+      "position": [
+        400,
+        400
+      ]
     },
     {
       "parameters": {
@@ -48,7 +54,10 @@
       "name": "等 8 分鐘 (Report 生成)",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [600, 400],
+      "position": [
+        600,
+        400
+      ],
       "webhookId": "wait-awd-report"
     },
     {
@@ -61,7 +70,10 @@
       "name": "查詢 Report 狀態",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [800, 400]
+      "position": [
+        800,
+        400
+      ]
     },
     {
       "parameters": {
@@ -90,7 +102,10 @@
       "name": "還在跑?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1000, 400]
+      "position": [
+        1000,
+        400
+      ]
     },
     {
       "parameters": {
@@ -101,7 +116,10 @@
       "name": "再等 3 分鐘",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [1200, 300],
+      "position": [
+        1200,
+        300
+      ],
       "webhookId": "wait-awd-report-more"
     },
     {
@@ -114,7 +132,10 @@
       "name": "查 Report 差異",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1200, 500]
+      "position": [
+        1200,
+        500
+      ]
     },
     {
       "parameters": {
@@ -142,7 +163,10 @@
       "name": "有 >3 個異常?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1400, 500]
+      "position": [
+        1400,
+        500
+      ]
     },
     {
       "parameters": {
@@ -156,44 +180,113 @@
       "name": "📧 通知差異",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
-      "position": [1600, 500]
+      "position": [
+        1600,
+        500
+      ]
     }
   ],
   "connections": {
     "每天 03:00 UTC": {
-      "main": [[{ "node": "觸發 AWD Report", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "觸發 AWD Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "觸發 AWD Report": {
-      "main": [[{ "node": "等 8 分鐘 (Report 生成)", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "等 8 分鐘 (Report 生成)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "等 8 分鐘 (Report 生成)": {
-      "main": [[{ "node": "查詢 Report 狀態", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "查詢 Report 狀態",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "查詢 Report 狀態": {
-      "main": [[{ "node": "還在跑?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "還在跑?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "還在跑?": {
       "main": [
-        [{ "node": "再等 3 分鐘", "type": "main", "index": 0 }],
-        [{ "node": "查 Report 差異", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "再等 3 分鐘",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "查 Report 差異",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "再等 3 分鐘": {
-      "main": [[{ "node": "查詢 Report 狀態", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "查詢 Report 狀態",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "查 Report 差異": {
-      "main": [[{ "node": "有 >3 個異常?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "有 >3 個異常?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "有 >3 個異常?": {
       "main": [
-        [{ "node": "📧 通知差異", "type": "main", "index": 0 }],
+        [
+          {
+            "node": "📧 通知差異",
+            "type": "main",
+            "index": 0
+          }
+        ],
         []
       ]
     }
   },
   "settings": {
     "executionOrder": "v1",
-    "timezone": "Asia/Taipei"
+    "timezone": "UTC"
   },
   "meta": {
     "instanceId": "awd-report-daily"
