@@ -1,0 +1,29 @@
+# ─── Production override（GCP VM 專用）──────────────────────────────────────
+# 只放「雲端跟本機不同」的設定，其餘沿用 docker-compose.yml。
+#
+# 本機開發：  docker compose up -d
+# 雲端 VM：   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# 差異：
+#   1. DuckDB 與 n8n 資料放在 VM 的持久化磁碟 /data（本機放 ./duckdb）
+#   2. n8n 允許透過 http + 非 localhost 存取（IAP 設好前的過渡設定）
+
+services:
+  n8n:
+    environment:
+      # n8n 預設要求 HTTPS 才能登入；在 IAP/HTTPS 設好前先關閉
+      - N8N_SECURE_COOKIE=false
+
+volumes:
+  duckdb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data
+  n8n_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/n8n

@@ -1,0 +1,506 @@
+{
+  "name": "AWD Replenishment — Daily ETL + Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## ⚙️ 匯入後請修改以下設定\n\n**1. BASE_URL**\n所有 HTTP 節點的 URL 預設為 `http://etl:8000`（Docker 內部）。\n若從外部呼叫請改為 `http://YOUR_SERVER_IP:8000`。\n\n**2. Gmail 憑證**\n「📧 寄送 Email 通知」節點 → 選擇你的 Gmail OAuth2 帳號。\n\n**3. 收件人 Email**\n「📧 寄送 Email 通知」節點 → sendTo 改為你的 Email。\n\n**4. 排程時區**\nSchedule Trigger → 預設 UTC 06:00（= 台灣時間 14:00）。\n請依需求調整。",
+        "height": 320,
+        "width": 420,
+        "color": 4
+      },
+      "id": "00000000-0000-0000-0000-000000000001",
+      "name": "📋 設定說明",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        80,
+        560
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "00000000-0000-0000-0000-000000000002",
+      "name": "🖱️ 手動觸發（測試）",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        280,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * *"
+            }
+          ]
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000003",
+      "name": "⏰ 每日 10:00 UTC（台灣 18:00）",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        280,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://etl:8000/etl/inventory/sync",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000010",
+      "name": "① FBA 庫存同步",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 60,
+        "unit": "seconds"
+      },
+      "id": "00000000-0000-0000-0000-000000000011",
+      "name": "⏳ 等待 FBA 完成 (60s)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "webhookId": "fba-wait-webhook-id",
+      "position": [
+        780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://etl:8000/etl/inventory/status",
+        "method": "GET",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0000-000000000012",
+      "name": "✔ FBA 狀態確認",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1000,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://etl:8000/etl/awd/sync",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000020",
+      "name": "② AWD 庫存同步",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "00000000-0000-0000-0000-000000000021",
+      "name": "⏳ 等待 AWD 完成 (30s)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "webhookId": "awd-wait-webhook-id",
+      "position": [
+        1440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://etl:8000/etl/awd/status",
+        "method": "GET",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0000-000000000022",
+      "name": "✔ AWD 狀態確認",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://etl:8000/etl/orders/sync",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"lookback_days\": 35}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000030",
+      "name": "③ 訂單同步（Orders）",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://etl:8000/etl/sales/sync",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"days\": 30\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000040",
+      "name": "④ 銷售報告同步（Reports API）",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "00000000-0000-0000-0000-000000000041",
+      "name": "⏳ 等待 Reports API 完成 (10min)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "webhookId": "sales-wait-webhook-id",
+      "position": [
+        2320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://etl:8000/etl/sales/status",
+        "method": "GET",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0000-000000000042",
+      "name": "✔ Sales 狀態確認",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://etl:8000/replenishment/daily-alert",
+        "method": "GET",
+        "options": {}
+      },
+      "id": "00000000-0000-0000-0000-000000000050",
+      "name": "⑤ 取得每日庫存警示",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "has-issues-condition",
+              "leftValue": "={{ $json.has_issues }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000060",
+      "name": "有庫存問題？",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2980,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst date = data.date || new Date().toISOString().slice(0,10);\nconst stockAlerts = data.stock_alerts || [];\nconst unmatched = data.unmatched_skus || {};\nconst fbaMissing = unmatched.fba_unmatched || [];\nconst awdMissing = unmatched.awd_unmatched || [];\n\nconst totalIssues = stockAlerts.length + fbaMissing.length + awdMissing.length;\n\n// ── HTML Email ──────────────────────────────────────────────────────────────\nlet html = `<div style=\"font-family:Arial,sans-serif;max-width:820px;color:#333\">`;\nhtml += `<h2 style=\"border-bottom:2px solid #e0e0e0;padding-bottom:8px\">🔔 AWD 補貨日報 — ${date}</h2>`;\n\n// 1. 庫存斷貨警示\nif (stockAlerts.length > 0) {\n  html += `<h3 style=\"color:#c0392b\">📦 庫存警示（${stockAlerts.length} 個 SKU）</h3>`;\n  html += `<table cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;width:100%;font-size:13px\">`;\n  html += `<thead><tr style=\"background:#f5f5f5;border:1px solid #ddd\">`;\n  html += `<th style=\"border:1px solid #ddd\">Collection</th>`;\n  html += `<th style=\"border:1px solid #ddd\">SKU</th>`;\n  html += `<th style=\"border:1px solid #ddd\">Product Name</th>`;\n  html += `<th style=\"border:1px solid #ddd\">警示狀態</th>`;\n  html += `<th style=\"border:1px solid #ddd\">FBA 現貨</th>`;\n  html += `<th style=\"border:1px solid #ddd\">AWD 現貨</th>`;\n  html += `<th style=\"border:1px solid #ddd\">30日銷量</th>`;\n  html += `</tr></thead><tbody>`;\n  for (const r of stockAlerts) {\n    const bg = r.stock_alert.startsWith('🔴') ? '#fdecea'\n             : r.stock_alert.startsWith('🟠') ? '#fff3e0'\n             : '#fffde7';\n    html += `<tr style=\"background:${bg}\">`;\n    html += `<td style=\"border:1px solid #ddd\">${r.collection||'-'}</td>`;\n    html += `<td style=\"border:1px solid #ddd\"><b>${r.sku}</b></td>`;\n    html += `<td style=\"border:1px solid #ddd\">${r.product_name||'-'}</td>`;\n    html += `<td style=\"border:1px solid #ddd\">${r.stock_alert}</td>`;\n    html += `<td style=\"border:1px solid #ddd;text-align:center\">${r.fba_available||0}</td>`;\n    html += `<td style=\"border:1px solid #ddd;text-align:center\">${r.awd_available||0}</td>`;\n    html += `<td style=\"border:1px solid #ddd;text-align:center\">${r.sales_qty||0}</td>`;\n    html += `</tr>`;\n  }\n  html += `</tbody></table><br/>`;\n}\n\n// 2. Anchor 未對應 SKU（FBA 有但 product_catalog 沒有）\nif (fbaMissing.length > 0) {\n  html += `<h3 style=\"color:#d35400\">⚠️ FBA 有庫存但 Anchor 未建立（${fbaMissing.length} 個）</h3>`;\n  html += `<table cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;width:100%;font-size:13px\">`;\n  html += `<thead><tr style=\"background:#f5f5f5\">`;\n  html += `<th style=\"border:1px solid #ddd\">SKU</th><th style=\"border:1px solid #ddd\">ASIN</th>`;\n  html += `<th style=\"border:1px solid #ddd\">Product Name</th><th style=\"border:1px solid #ddd\">FBA 現貨</th><th style=\"border:1px solid #ddd\">FBA Inbound</th>`;\n  html += `</tr></thead><tbody>`;\n  for (const r of fbaMissing) {\n    html += `<tr><td style=\"border:1px solid #ddd\">${r.sku}</td><td style=\"border:1px solid #ddd\">${r.asin||'-'}</td>`;\n    html += `<td style=\"border:1px solid #ddd\">${r.product_name||'-'}</td>`;\n    html += `<td style=\"border:1px solid #ddd;text-align:center\">${r.fba_available||0}</td>`;\n    html += `<td style=\"border:1px solid #ddd;text-align:center\">${r.fba_inbound||0}</td></tr>`;\n  }\n  html += `</tbody></table><br/>`;\n}\n\n// 3. Anchor 未對應 SKU（AWD 有但 product_catalog 沒有）\nif (awdMissing.length > 0) {\n  html += `<h3 style=\"color:#d35400\">⚠️ AWD 有庫存但 Anchor 未建立（${awdMissing.length} 個）</h3>`;\n  html += `<table cellpadding=\"8\" cellspacing=\"0\" style=\"border-collapse:collapse;width:100%;font-size:13px\">`;\n  html += `<thead><tr style=\"background:#f5f5f5\">`;\n  html += `<th style=\"border:1px solid #ddd\">SKU</th><th style=\"border:1px solid #ddd\">AWD 現貨</th>`;\n  html += `<th style=\"border:1px solid #ddd\">AWD Inbound</th><th style=\"border:1px solid #ddd\">AWD Outbound</th>`;\n  html += `</tr></thead><tbody>`;\n  for (const r of awdMissing) {\n    html += `<tr><td style=\"border:1px solid #ddd\">${r.sku}</td>`;\n    html += `<td style=\"border:1px solid #ddd;text-align:center\">${r.awd_available||0}</td>`;\n    html += `<td style=\"border:1px solid #ddd;text-align:center\">${r.awd_inbound||0}</td>`;\n    html += `<td style=\"border:1px solid #ddd;text-align:center\">${r.awd_outbound||0}</td></tr>`;\n  }\n  html += `</tbody></table><br/>`;\n}\n\nhtml += `<p style=\"color:#999;font-size:11px;border-top:1px solid #eee;padding-top:8px\">`;\nhtml += `此郵件由 n8n AWD Replenishment Pipeline 自動發送 | ${new Date().toISOString()}</p></div>`;\n\n// ── Subject ────────────────────────────────────────────────────────────────\nconst parts = [];\nif (stockAlerts.length > 0) parts.push(`${stockAlerts.length} 個庫存警示`);\nif (fbaMissing.length + awdMissing.length > 0) parts.push(`${fbaMissing.length + awdMissing.length} 個未對應 SKU`);\nconst subject = `[AWD 補貨] ${date} — ${parts.join(' + ')}`;\n\nreturn [{ json: { subject, html_body: html, total_issues: totalIssues } }];"
+      },
+      "id": "00000000-0000-0000-0000-000000000070",
+      "name": "📝 組合 Email 內容",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3200,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "thedigiflip@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html_body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000080",
+      "name": "📧 寄送 Email 通知",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3420,
+        160
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "00000000-0000-0000-0000-000000000090",
+      "name": "✅ 今日無警示，結束",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3200,
+        440
+      ]
+    }
+  ],
+  "connections": {
+    "🖱️ 手動觸發（測試）": {
+      "main": [
+        [
+          {
+            "node": "① FBA 庫存同步",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏰ 每日 06:00 UTC（台灣 14:00）": {
+      "main": [
+        [
+          {
+            "node": "① FBA 庫存同步",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "① FBA 庫存同步": {
+      "main": [
+        [
+          {
+            "node": "⏳ 等待 FBA 完成 (60s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏳ 等待 FBA 完成 (60s)": {
+      "main": [
+        [
+          {
+            "node": "✔ FBA 狀態確認",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✔ FBA 狀態確認": {
+      "main": [
+        [
+          {
+            "node": "② AWD 庫存同步",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "② AWD 庫存同步": {
+      "main": [
+        [
+          {
+            "node": "⏳ 等待 AWD 完成 (30s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏳ 等待 AWD 完成 (30s)": {
+      "main": [
+        [
+          {
+            "node": "✔ AWD 狀態確認",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✔ AWD 狀態確認": {
+      "main": [
+        [
+          {
+            "node": "③ 訂單同步（Orders）",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "③ 訂單同步（Orders）": {
+      "main": [
+        [
+          {
+            "node": "④ 銷售報告同步（Reports API）",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "④ 銷售報告同步（Reports API）": {
+      "main": [
+        [
+          {
+            "node": "⏳ 等待 Reports API 完成 (10min)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⏳ 等待 Reports API 完成 (10min)": {
+      "main": [
+        [
+          {
+            "node": "✔ Sales 狀態確認",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "✔ Sales 狀態確認": {
+      "main": [
+        [
+          {
+            "node": "⑤ 取得每日庫存警示",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⑤ 取得每日庫存警示": {
+      "main": [
+        [
+          {
+            "node": "有庫存問題？",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "有庫存問題？": {
+      "main": [
+        [
+          {
+            "node": "📝 組合 Email 內容",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✅ 今日無警示，結束",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 組合 Email 內容": {
+      "main": [
+        [
+          {
+            "node": "📧 寄送 Email 通知",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": ""
+  },
+  "pinData": {}
+}

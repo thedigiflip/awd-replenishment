@@ -1,0 +1,151 @@
+{
+  "name": "SP-API | Traffic Report Backfill",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "bf000001-0001-0001-0001-000000000001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "notes": "手動觸發 — 在 n8n UI 點「Test workflow」執行"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "param-start",
+              "name": "start_month",
+              "value": "2024-05",
+              "type": "string"
+            },
+            {
+              "id": "param-end",
+              "name": "end_month",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "param-marketplace",
+              "name": "marketplace_id",
+              "value": "ATVPDKIKX0DER",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bf000001-0001-0001-0001-000000000002",
+      "name": "Set Params",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "notes": "✏️ 修改這裡的參數：\n- start_month: 起始月份 YYYY-MM\n- end_month: 結束月份 YYYY-MM（留空 = 上個月）\n- marketplace_id: US=ATVPDKIKX0DER / DE=A1PA6795UKMFR9 / UK=A1F83G8C2ARO7P"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 動態組出 request body，end_month 為空字串時不帶入（ETL 自動用上個月）\nconst params = $input.item.json;\nconst body = {\n  marketplace_id: params.marketplace_id,\n  start_month: params.start_month,\n};\nif (params.end_month && params.end_month.trim() !== '') {\n  body.end_month = params.end_month.trim();\n}\nreturn { body: JSON.stringify(body), ...params };"
+      },
+      "id": "bf000001-0001-0001-0001-000000000003",
+      "name": "Build Request Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "notes": "end_month 為空時自動省略，ETL 會使用上個完整月份作為結束點"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://etl:8000/etl/traffic/backfill",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "bf000001-0001-0001-0001-000000000004",
+      "name": "Trigger Backfill",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300],
+      "notes": "POST /etl/traffic/backfill — 立即回傳，ETL 在背景逐月處理"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 顯示 backfill 啟動摘要\nconst res = $input.item.json;\nconst months = res.months || [];\nconst est = res.estimated_minutes || 0;\n\nconsole.log('=== Backfill Triggered ===');\nconsole.log(`Months planned: ${res.months_planned}`);\nconsole.log(`Period: ${res.start_month} → ${res.end_month}`);\nconsole.log(`Estimated time: ~${est} minutes`);\nconsole.log(`Monitor: http://localhost:8000/etl/traffic/history?limit=30`);\nconsole.log('Months:', months.join(', '));\n\nreturn {\n  summary: `Backfill started: ${res.months_planned} months (${res.start_month} → ${res.end_month})`,\n  estimated_minutes: est,\n  monitor_url: 'http://localhost:8000/etl/traffic/history?limit=30',\n  months: months,\n};"
+      },
+      "id": "bf000001-0001-0001-0001-000000000005",
+      "name": "Log Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "notes": "在 n8n execution log 顯示啟動摘要與監控 URL"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Params",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Params": {
+      "main": [
+        [
+          {
+            "node": "Build Request Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Request Body": {
+      "main": [
+        [
+          {
+            "node": "Trigger Backfill",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Backfill": {
+      "main": [
+        [
+          {
+            "node": "Log Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["sp-api", "traffic", "backfill", "one-time"],
+  "triggerCount": 0,
+  "updatedAt": "2026-05-01T00:00:00.000Z",
+  "versionId": "1"
+}

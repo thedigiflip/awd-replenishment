@@ -1,0 +1,201 @@
+{
+  "name": "AWD Report — 每天凌晨 03:00 UTC (台灣 11:00)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-daily-3am-utc",
+      "name": "每天 03:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://etl:8000/etl/awd/report-sync",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "trigger-report",
+      "name": "觸發 AWD Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 400]
+    },
+    {
+      "parameters": {
+        "unit": "minutes",
+        "amount": 8
+      },
+      "id": "wait-8-min",
+      "name": "等 8 分鐘 (Report 生成)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [600, 400],
+      "webhookId": "wait-awd-report"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://etl:8000/etl/awd/report-status",
+        "options": {}
+      },
+      "id": "check-status",
+      "name": "查詢 Report 狀態",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [800, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "still-running",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "running",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-running",
+      "name": "還在跑?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1000, 400]
+    },
+    {
+      "parameters": {
+        "unit": "minutes",
+        "amount": 3
+      },
+      "id": "wait-more",
+      "name": "再等 3 分鐘",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1200, 300],
+      "webhookId": "wait-awd-report-more"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://etl:8000/etl/health/anomalies?since_hours=1&pipeline=awd_report",
+        "options": {}
+      },
+      "id": "check-anomalies",
+      "name": "查 Report 差異",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-anomalies",
+              "leftValue": "={{ $json.count }}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-anomalies",
+      "name": "有 >3 個異常?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 500]
+    },
+    {
+      "parameters": {
+        "sendTo": "thedigiflip@gmail.com",
+        "subject": "=📊 AWD Report 差異報告 — {{ $now.format('MM/dd HH:mm') }}",
+        "emailType": "html",
+        "message": "=<h3>SP-API AWD Report 已完成，發現 {{ $json.count }} 個顯著差異</h3><p>這些是 list_inventory 抓錯或漏掉、但 Report 修正的 SKU：</p><ul>{{ $json.anomalies.slice(0,20).map(a => `<li><b>${a.sku}</b> · ${a.field}: ${a.old_value} → ${a.new_value} (${a.change_pct}%) — ${a.reason}</li>`).join('') }}</ul><p><a href='http://localhost:8000'>👉 開 Dashboard 查看</a></p>",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "📧 通知差異",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1600, 500]
+    }
+  ],
+  "connections": {
+    "每天 03:00 UTC": {
+      "main": [[{ "node": "觸發 AWD Report", "type": "main", "index": 0 }]]
+    },
+    "觸發 AWD Report": {
+      "main": [[{ "node": "等 8 分鐘 (Report 生成)", "type": "main", "index": 0 }]]
+    },
+    "等 8 分鐘 (Report 生成)": {
+      "main": [[{ "node": "查詢 Report 狀態", "type": "main", "index": 0 }]]
+    },
+    "查詢 Report 狀態": {
+      "main": [[{ "node": "還在跑?", "type": "main", "index": 0 }]]
+    },
+    "還在跑?": {
+      "main": [
+        [{ "node": "再等 3 分鐘", "type": "main", "index": 0 }],
+        [{ "node": "查 Report 差異", "type": "main", "index": 0 }]
+      ]
+    },
+    "再等 3 分鐘": {
+      "main": [[{ "node": "查詢 Report 狀態", "type": "main", "index": 0 }]]
+    },
+    "查 Report 差異": {
+      "main": [[{ "node": "有 >3 個異常?", "type": "main", "index": 0 }]]
+    },
+    "有 >3 個異常?": {
+      "main": [
+        [{ "node": "📧 通知差異", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Taipei"
+  },
+  "meta": {
+    "instanceId": "awd-report-daily"
+  }
+}

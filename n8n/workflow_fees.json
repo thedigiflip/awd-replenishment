@@ -1,0 +1,134 @@
+{
+  "name": "SP-API | FBA Fees Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 4 2 * *"
+            }
+          ]
+        }
+      },
+      "id": "trigger-fees",
+      "name": "Every Month 2nd 04:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://etl:8000/etl/fees/sync",
+        "options": { "timeout": 30000 }
+      },
+      "id": "trigger-sync",
+      "name": "Trigger FBA Fee Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "amount": 120,
+        "unit": "seconds"
+      },
+      "id": "wait-1",
+      "name": "Wait 2 min",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [680, 300],
+      "webhookId": "fees-wait-1"
+    },
+    {
+      "parameters": {
+        "url": "http://etl:8000/etl/fees/status",
+        "options": {}
+      },
+      "id": "poll-status",
+      "name": "Poll Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "check-done",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "running",
+              "operator": { "type": "string", "operation": "notEquals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-done",
+      "name": "Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "amount": 60,
+        "unit": "seconds"
+      },
+      "id": "wait-2",
+      "name": "Wait 60s (retry)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1120, 480],
+      "webhookId": "fees-wait-2"
+    },
+    {
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "summary",
+              "stringValue": "=✅ FBA Fee sync done | status={{ $json.status }} | rows={{ $json.rows_written ?? 'n/a' }} | finished={{ $json.finished_at }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-result",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Every Month 2nd 04:00 UTC": {
+      "main": [[{ "node": "Trigger FBA Fee Sync", "type": "main", "index": 0 }]]
+    },
+    "Trigger FBA Fee Sync": {
+      "main": [[{ "node": "Wait 2 min", "type": "main", "index": 0 }]]
+    },
+    "Wait 2 min": {
+      "main": [[{ "node": "Poll Status", "type": "main", "index": 0 }]]
+    },
+    "Poll Status": {
+      "main": [[{ "node": "Done?", "type": "main", "index": 0 }]]
+    },
+    "Done?": {
+      "main": [
+        [{ "node": "Log Result", "type": "main", "index": 0 }],
+        [{ "node": "Wait 60s (retry)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Wait 60s (retry)": {
+      "main": [[{ "node": "Poll Status", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "fees" }]
+}

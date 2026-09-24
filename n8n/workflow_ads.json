@@ -1,0 +1,186 @@
+{
+  "name": "SP-API | Ads Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 * * *"
+            }
+          ]
+        }
+      },
+      "id": "d4e5f6a7-0004-0004-0004-000000000001",
+      "name": "Daily 8AM JST (00:00 UTC)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "notes": "廣告資料 D+1 才完整，抓昨天的資料"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "param-lookback",
+              "name": "lookback_days",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "param-type",
+              "name": "report_type",
+              "value": "spAdvertisedProduct",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d4e5f6a7-0004-0004-0004-000000000002",
+      "name": "Set Params",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://etl:8000/etl/ads/sync",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"lookback_days\": {{ $json.lookback_days }},\n  \"report_type\": \"{{ $json.report_type }}\"\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "d4e5f6a7-0004-0004-0004-000000000003",
+      "name": "Trigger Ads Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "minutes"
+      },
+      "id": "d4e5f6a7-0004-0004-0004-000000000004",
+      "name": "Wait 3 min",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [900, 300],
+      "webhookId": "ads-wait",
+      "notes": "Ads 報表產生需要 1-3 分鐘"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://etl:8000/etl/ads/status",
+        "options": {}
+      },
+      "id": "d4e5f6a7-0004-0004-0004-000000000005",
+      "name": "Check Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-success",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d4e5f6a7-0004-0004-0004-000000000006",
+      "name": "Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {},
+      "id": "d4e5f6a7-0004-0004-0004-000000000007",
+      "name": "Done ✅",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1560, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "err-msg",
+              "name": "error_message",
+              "value": "=Ads sync failed. Last status: {{ $json.status }} | Error: {{ $json.error_message }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d4e5f6a7-0004-0004-0004-000000000008",
+      "name": "Format Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1560, 420]
+    }
+  ],
+  "connections": {
+    "Daily 8AM JST (00:00 UTC)": {
+      "main": [[{"node": "Set Params", "type": "main", "index": 0}]]
+    },
+    "Set Params": {
+      "main": [[{"node": "Trigger Ads Sync", "type": "main", "index": 0}]]
+    },
+    "Trigger Ads Sync": {
+      "main": [[{"node": "Wait 3 min", "type": "main", "index": 0}]]
+    },
+    "Wait 3 min": {
+      "main": [[{"node": "Check Status", "type": "main", "index": 0}]]
+    },
+    "Check Status": {
+      "main": [[{"node": "Success?", "type": "main", "index": 0}]]
+    },
+    "Success?": {
+      "main": [
+        [{"node": "Done ✅", "type": "main", "index": 0}],
+        [{"node": "Format Error", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "tags": ["sp-api", "ads", "etl"]
+}

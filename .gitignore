@@ -8,9 +8,13 @@ duckdb/
 *.db.wal
 
 # ── n8n 資料（包含 credentials）──────────────────
-n8n/
+# 用 n8n/* 而非 n8n/ —— 排除整個資料夾後，Git 無法再用 ! 加回裡面的檔案
+n8n/*
 # 例外：workflow JSON 檔要版本控制（不含機密，只有 placeholder credential id）
 !n8n/*.json
+
+# ── LibreOffice / Excel 暫存鎖定檔 ──────────────
+.~lock.*
 
 # ── Python ───────────────────────────────────────
 __pycache__/
