@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mageasy 補貨儀表板</title>
+<title>MAGEASY eCom Dashboard</title>
 <style>
 /* ── Tableau-inspired design system ─────────────────────────────────────── */
 :root {
@@ -310,7 +310,7 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
 
 <!-- Top bar -->
 <div class="topbar">
-  <h1>🛒 Mageasy 補貨儀表板</h1>
+  <h1>🛒 MAGEASY eCom Dashboard</h1>
   <span class="sync-info" id="lastRefresh">尚未載入</span>
   <button class="btn btn-outline btn-sm" onclick="loadData()">🔄 重新整理</button>
   <button class="btn btn-white btn-sm" onclick="openCfg()">⚙️ SKU 設定</button>
@@ -341,9 +341,9 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <div class="sub">Coverage &lt; 2.33M</div>
     </div>
     <div class="card c-orange">
-      <div class="lbl">🔴 超過 5M Cap</div>
+      <div class="lbl" id="k-cap-lbl">🔴 超過 Cap</div>
       <div class="val" id="k-cap" style="color:var(--orange)">—</div>
-      <div class="sub">FBA+AWD &gt; 3 個月</div>
+      <div class="sub" id="k-cap-sub">FBA+AWD 超過上限</div>
     </div>
     <div class="card c-green">
       <div class="lbl">🚢 需補海運</div>
@@ -848,7 +848,8 @@ const COLS = [
       tip:'AWD Total = Available + Inbound\nOutbound 不列入（避免重複扣減 — Amazon 已自動從 awd_available 扣掉，並列在 FBA inbound_shipped）'},
   {k:'awd_month',        h:'AWD Month',                w:58,  a:'center', r:'awdMonthCell'},
   {k:'total_coverage',   h:'Total Coverage\nFBA+AWD(M)',w:70, a:'center', r:'covCell'},
-  {k:'cap_alert',        h:'5M Cap 警示',              w:78,  a:'center', r:'capTag'},
+  {k:'cap_alert',        h:'Cap 警示',                 w:78,  a:'center', r:'capTag',
+      tip:'FBA+AWD Total Coverage 超過上限月數（Controls → FBA+AWD 總上限月數）'},
   // ── 深圳倉庫（新版：美國倉 + 欠數 + 佳樂倉）─────────────────────────
   {k:'safety_stock',     h:'安全庫存\n門檻',            w:65,  a:'center', r:'safetyCell'},
   {k:'jl_qty',           h:'佳樂倉',                   w:65,  a:'center', fmt:0},
@@ -1197,6 +1198,17 @@ async function loadData() {
     allData = rep.data || [];
     // 儲存動態閾值供 renderer 用（Total Pipeline 分級著色）
     window._thresholds = rep.thresholds || {air_threshold: 2.83, total_cap_months: 5.0};
+
+    // Cap 標題依 Controls 的實際設定值動態顯示（例：4 → "4M Cap 警示"）
+    {
+      const capM = Number(window._thresholds.total_cap_months);
+      const capTxt = Number.isInteger(capM) ? String(capM) : capM.toFixed(1);
+      document.getElementById('k-cap-lbl').textContent = `🔴 超過 ${capTxt}M Cap`;
+      document.getElementById('k-cap-sub').textContent = `FBA+AWD > ${capTxt} 個月`;
+      const capIdx = COLS.findIndex(c => c.k === 'cap_alert');
+      const capTh  = document.querySelector(`#hdr th[data-i="${capIdx}"]`);
+      if (capTh) capTh.innerHTML = `${capTxt}M Cap 警示`;
+    }
 
     // KPIs
     document.getElementById('k-total').textContent = allData.length;

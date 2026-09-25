@@ -46,7 +46,7 @@ _CSV_FIELDS = [
     ("awd_month",             "AWD Month"),
     # Coverage
     ("total_coverage",        "Total Coverage FBA+AWD (M)"),
-    ("cap_alert",             "5M Cap 警示"),
+    ("cap_alert",             "Cap 警示（FBA+AWD 總上限）"),
     # 深圳倉庫（美國倉 + 欠數 + 佳樂倉）
     ("safety_stock",          "安全庫存門檻"),
     ("us_qty",                "美國倉"),
