@@ -336,6 +336,11 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <div class="sub" id="k-total-sub">已載入</div>
     </div>
     <div class="card c-red">
+      <div class="lbl">🏭 返單警示</div>
+      <div class="val" id="k-reorder" style="color:var(--red)">—</div>
+      <div class="sub" id="k-reorder-sub">🔴 需返單</div>
+    </div>
+    <div class="card c-red">
       <div class="lbl">⚠️ 空運警示</div>
       <div class="val" id="k-air" style="color:var(--red)">—</div>
       <div class="sub">Coverage &lt; 2.33M</div>
@@ -491,6 +496,7 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
     <label>警示</label>
     <select id="f-alert" onchange="render()">
       <option value="">全部</option>
+      <option value="reorder">需返單</option>
       <option value="air">空運警示</option>
       <option value="cap">超過上限</option>
       <option value="sea">需補海運</option>
@@ -1213,6 +1219,11 @@ async function loadData() {
     // KPIs
     document.getElementById('k-total').textContent = allData.length;
     document.getElementById('k-total-sub').textContent = `顯示 ${allData.length} 筆`;
+    // 返單警示：主數字 = 🔴 需返單；副標列出 🟡 佳樂告急
+    const nReorder = allData.filter(r => (r.reorder_alert||'').includes('需返單')).length;
+    const nJlLow   = allData.filter(r => (r.reorder_alert||'').includes('佳樂')).length;
+    document.getElementById('k-reorder').textContent     = nReorder;
+    document.getElementById('k-reorder-sub').textContent = `🔴 需返單 ｜ 🟡 佳樂告急 ${nJlLow}`;
     document.getElementById('k-air').textContent   = allData.filter(r=>r.air_alert).length;
     document.getElementById('k-cap').textContent   = allData.filter(r=>r.cap_alert==='🔴 超過上限').length;
     document.getElementById('k-sea').textContent   = allData.filter(r=>r.sea_shipment_qty>0).length;
@@ -1266,6 +1277,7 @@ function render() {
     if(q && !['collection','parent_asin','asin','sku','product_name']
         .some(k => (r[k]||'').toLowerCase().includes(q))) return false;
     if(fType && r.product_type !== fType) return false;
+    if(fAlt === 'reorder' && !(r.reorder_alert||'').includes('需返單')) return false;
     if(fAlt === 'air' && !r.air_alert) return false;
     if(fAlt === 'cap' && r.cap_alert !== '🔴 超過上限') return false;
     if(fAlt === 'sea' && !(r.sea_shipment_qty > 0)) return false;
