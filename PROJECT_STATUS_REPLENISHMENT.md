@@ -1,6 +1,8 @@
-# MAGEASY eCom Dashboard — 專案狀態與交接文件
+# MAGEASY eCom Dashboard — 補貨（Replenishment）功能狀態與交接文件
 
-> 最後更新：2026-09-25
+> 最後更新：2026-10-11
+> 其他功能各有自己的狀態文件：`PROJECT_STATUS_<功能>.md`（例如 Traffic → `PROJECT_STATUS_TRAFFIC.md`）
+> 第 2–4 節（環境、Runbook、排程）目前也適用於所有功能
 > 用途：新開 Claude 對話或新工程師接手時，先讀這份文件（架構細節見 `README.md`，部署步驟見 `DEPLOYMENT.md`）
 
 ---
@@ -110,6 +112,12 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ## 6. 架構檢視：繼續擴充 Dashboard（Traffic 等）前的風險與建議
 
 依優先度排列。🔴 = 建議在開發 Traffic 前或同時處理。
+
+### 🔴 0. FBA Fees 同步會用德國站費用覆蓋美國（下次自動執行：2026-11-02 台灣 12:00 前必須修）
+- `product_catalog.fba_fee` 每個 ASIN 只有一欄，但 `POST /etl/fees/sync` 不帶 `marketplace_id` 時會 loop US → UK → DE，最後寫入的 DE 會覆蓋 US
+- `services/fees_service.py` 查詢時寫死 `currency='USD'`，UK/DE 回傳值不可靠
+- Traffic 利潤 = 售價 − COG − fba_fee − 引用費，會直接受影響
+- **建議**：短期讓 n8n Fees workflow 只跑 US（body 帶 `marketplace_id=ATVPDKIKX0DER`）；長期改成獨立的 `product_fees(asin, marketplace_id, fba_fee, currency)` 表，各站各自的費用與幣別
 
 ### 🔴 A. Traffic 資料目前會把不同幣別加在一起
 - `GET /etl/traffic/data` **沒有依站點過濾**，US（USD）+ UK（GBP）+ DE（EUR）的營收會直接相加，Sessions / CVR 也會混站
