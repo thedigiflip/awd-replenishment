@@ -20,7 +20,9 @@ log = structlog.get_logger()
 router = APIRouter()
 _svc = ReplenishmentService()
 
-# ─── CSV 欄位順序（對應 Dashboard 主表 group 順序）───────────────────────────
+# ─── CSV 欄位順序（供 API 直接呼叫 /replenishment/export 使用）──────────────
+# 注意：Dashboard 的「匯出 CSV」按鈕已改由前端依 COLS 直接產生（dashboard.html
+# 的 exportCsv），欄位順序永遠跟畫面一致；此清單只給直接呼叫 API 的情境使用。
 _CSV_FIELDS = [
     # 識別
     ("collection",            "Collection"),
