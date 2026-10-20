@@ -3,7 +3,7 @@ SZ Warehouse Router — 深圳倉庫（美國倉 + 佳樂倉 + Unit/Case）
 ─────────────────────────────────────────────────────────────
 - POST /etl/sz/upload    → 上傳 Excel/CSV
      • 預設 replace=true：清空 sz_warehouse 舊資料後寫入新資料
-     • 同步更新 sku_config.unit_per_case（單一 source of truth）
+     • 同步更新 asin_config.unit_per_case（以 Child ASIN 為 key）
 - GET  /etl/sz/template  → 下載 SZ Upload Template（依當下 Anchor 動態生成）
 - GET  /etl/sz/status    → 回傳最新快照時間 + 筆數 + 資料新鮮度（days_old）
 - GET  /etl/sz/unmatched → SZ 有但 Anchor 找不到的 SKU（依 ASIN mapping 判斷）
@@ -163,11 +163,12 @@ async def upload_sz(
             ).fetchall()
             sku_set  = {r[0] for r in rows}
             asin2sku = {r[1]: r[0] for r in rows}
-            return sku_set, asin2sku
+            sku2asin = {r[0]: r[1] for r in rows}
+            return sku_set, asin2sku, sku2asin
         finally:
             conn.close()
 
-    anchor_skus, anchor_asin_to_sku = _load_anchor_maps()
+    anchor_skus, anchor_asin_to_sku, anchor_sku_to_asin = _load_anchor_maps()
 
     now = datetime.now(tz=timezone.utc)
     sz_rows: list[tuple] = []
@@ -198,6 +199,9 @@ async def upload_sz(
         else:
             continue  # 完全沒 key，跳過
 
+        # Child ASIN 才是對應 key：優先用 template 的 ASIN，沒填才用 Anchor 內部 SKU 換算
+        final_asin = raw_asin or anchor_sku_to_asin.get(raw_sku, "") or anchor_sku_to_asin.get(final_sku, "")
+
         us = _safe_int(row.get(us_col)) if us_col else 0
         pending = _safe_int(row.get(pd_col)) if pd_col else 0
         jl = _safe_int(row.get(jl_col)) if jl_col else 0
@@ -207,9 +211,9 @@ async def upload_sz(
         if uc < 1:
             uc = 1
 
-        sz_rows.append((final_sku, us, jl, uc, pending, order_date, factory_date, now))
-        if uc_col:
-            uc_rows.append((final_sku, uc, now))
+        sz_rows.append((final_sku, us, jl, uc, pending, order_date, factory_date, now, final_asin))
+        if uc_col and final_asin:
+            uc_rows.append((final_asin, uc, now))
 
     if not sz_rows:
         raise HTTPException(422, "沒有有效資料列")
@@ -229,16 +233,16 @@ async def upload_sz(
                 INSERT INTO sz_warehouse
                     (sku, us_qty, jl_qty, unit_per_case, pending_qty,
                      order_date, factory_confirmed_date, synced_at,
-                     product_code, product_name, available_qty, shippable_qty)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', '', 0, ?)
-            """, [(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[1]) for r in sz_rows])
+                     product_code, product_name, available_qty, shippable_qty, asin)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', '', 0, ?, ?)
+            """, [(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[1], r[8]) for r in sz_rows])
 
-            # sku_config：同步 unit_per_case（單一 source of truth）
+            # asin_config：同步 unit_per_case（以 Child ASIN 為 key，單一 source of truth）
             if uc_rows:
                 conn.executemany("""
-                    INSERT INTO sku_config (sku, product_type, unit_per_case, updated_at)
+                    INSERT INTO asin_config (asin, product_type, unit_per_case, updated_at)
                     VALUES (?, '', ?, ?)
-                    ON CONFLICT (sku) DO UPDATE SET
+                    ON CONFLICT (asin) DO UPDATE SET
                         unit_per_case = excluded.unit_per_case,
                         updated_at    = now()
                 """, uc_rows)
@@ -289,24 +293,11 @@ async def download_sz_template():
             # v2 — 用 ASIN 對應：舊 sz_warehouse 的數字透過 sku→ASIN 對應保留
             # 就算 Anchor 換 SKU（例：CoverBuddyLite 1.2 → 1.3），舊倉庫數字也不會遺失
             rows = conn.execute("""
-                WITH sku_asin AS (
-                    -- 建立所有已知 SKU → ASIN 對應（Anchor + FBA + Sales，涵蓋歷史 SKU）
-                    SELECT DISTINCT sku, asin FROM product_catalog
-                    WHERE asin != '' AND sku != ''
-                    UNION
-                    SELECT DISTINCT sku, asin FROM inventory
-                    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM inventory)
-                      AND sku IS NOT NULL AND asin IS NOT NULL AND sku != '' AND asin != ''
-                    UNION
-                    SELECT DISTINCT sku, asin FROM sales_summary
-                    WHERE report_date >= CURRENT_DATE - INTERVAL 90 DAYS
-                      AND sku != '' AND asin != ''
-                ),
-                sz_by_asin AS (
-                    -- 依 ASIN 加總（涵蓋所有 SKU 變體：新 + 舊 + Amazon.Found 等）
+                WITH sz_by_asin AS (
+                    -- 依 Child ASIN 加總（sz_warehouse.asin 由上傳寫入；舊資料用 Anchor 換算）
                     -- 下單日期 & 工廠回覆交期 (Option A)：取最新那筆
                     SELECT
-                        sa.asin,
+                        COALESCE(NULLIF(sz.asin, ''), m.asin) AS asin,
                         SUM(sz.us_qty)        AS us_qty,
                         SUM(sz.pending_qty)   AS pending_qty,
                         SUM(sz.jl_qty)        AS jl_qty,
@@ -314,8 +305,14 @@ async def download_sz_template():
                         MAX(sz.order_date)    AS order_date,
                         MAX(sz.factory_confirmed_date) AS factory_confirmed_date
                     FROM sz_warehouse sz
-                    JOIN sku_asin sa ON sz.sku = sa.sku
-                    GROUP BY sa.asin
+                    LEFT JOIN product_catalog m ON sz.sku = m.sku
+                    GROUP BY 1
+                ),
+                anchor AS (   -- 一個 Child ASIN 一列
+                    SELECT * FROM (
+                        SELECT *, ROW_NUMBER() OVER (PARTITION BY asin ORDER BY sku) AS rn
+                        FROM product_catalog WHERE asin != ''
+                    ) WHERE rn = 1
                 )
                 SELECT
                     COALESCE(pc.parent_asin, '')  AS parent_asin,
@@ -329,9 +326,8 @@ async def download_sz_template():
                     sz.factory_confirmed_date     AS factory_confirmed_date,
                     COALESCE(sz.jl_qty, 0)        AS jl_qty,
                     COALESCE(sz.unit_per_case, 1) AS unit_per_case
-                FROM product_catalog pc
+                FROM anchor pc
                 LEFT JOIN sz_by_asin sz ON pc.asin = sz.asin
-                WHERE pc.asin != ''
                 ORDER BY pc.collection NULLS LAST, pc.sku
             """).fetchall()
             return rows
@@ -463,35 +459,27 @@ async def sz_unmatched():
         try:
             # 先建 SKU→ASIN 對應表（Anchor + FBA + Sales）
             rows = conn.execute("""
-                WITH sku_asin AS (
-                    SELECT DISTINCT sku, asin FROM product_catalog WHERE asin != '' AND sku != ''
-                    UNION
-                    SELECT DISTINCT sku, asin FROM inventory
-                    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM inventory)
-                      AND sku IS NOT NULL AND asin IS NOT NULL AND sku != '' AND asin != ''
-                    UNION
-                    SELECT DISTINCT sku, asin FROM sales_summary
-                    WHERE report_date >= CURRENT_DATE - INTERVAL 90 DAYS
-                      AND sku != '' AND asin != ''
-                ),
-                anchor_asins AS (
+                WITH anchor_asins AS (
                     SELECT DISTINCT asin FROM product_catalog WHERE asin != ''
+                ),
+                szx AS (
+                    SELECT sz.*, COALESCE(NULLIF(sz.asin, ''), m.asin) AS resolved_asin
+                    FROM sz_warehouse sz LEFT JOIN product_catalog m ON sz.sku = m.sku
                 )
                 SELECT
-                    sz.sku,
-                    sz.us_qty,
-                    sz.jl_qty,
-                    sa.asin      AS sz_asin,
-                    CASE WHEN aa.asin IS NULL THEN 'ASIN 不在 Anchor'
-                         WHEN sa.asin IS NULL THEN 'SKU 找不到 ASIN 對應'
+                    szx.sku,
+                    szx.us_qty,
+                    szx.jl_qty,
+                    szx.resolved_asin AS sz_asin,
+                    CASE WHEN szx.resolved_asin IS NULL OR szx.resolved_asin = '' THEN '沒有 ASIN'
+                         WHEN aa.asin IS NULL THEN 'ASIN 不在 Anchor'
                          ELSE 'OK'
                     END AS reason
-                FROM sz_warehouse sz
-                LEFT JOIN sku_asin sa ON sz.sku = sa.sku
-                LEFT JOIN anchor_asins aa ON sa.asin = aa.asin
-                WHERE (aa.asin IS NULL OR sa.asin IS NULL)
-                  AND (sz.us_qty > 0 OR sz.jl_qty > 0)
-                ORDER BY (sz.us_qty + sz.jl_qty) DESC
+                FROM szx
+                LEFT JOIN anchor_asins aa ON szx.resolved_asin = aa.asin
+                WHERE (aa.asin IS NULL)
+                  AND (szx.us_qty > 0 OR szx.jl_qty > 0)
+                ORDER BY (szx.us_qty + szx.jl_qty) DESC
             """).fetchall()
             return [
                 {"sku": r[0], "us_qty": r[1], "jl_qty": r[2],

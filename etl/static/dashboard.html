@@ -154,6 +154,7 @@ thead tr.grp th.g-sales{background:#1B5E20;color:rgba(255,255,255,.9);}
 thead tr.grp th.g-fba  {background:#0D47A1;color:rgba(255,255,255,.9);}
 thead tr.grp th.g-awd  {background:#BF360C;color:rgba(255,255,255,.9);}
 thead tr.grp th.g-cov  {background:#004D40;color:rgba(255,255,255,.9);}
+thead tr.grp th.g-excess{background:#4E342E;color:rgba(255,255,255,.9);}
 thead tr.grp th.g-sz   {background:#33691E;color:rgba(255,255,255,.9);}
 thead tr.grp th.g-reo  {background:#7B1FA2;color:rgba(255,255,255,.9);}
 thead tr.grp th.g-rep  {background:#3E2723;color:rgba(255,255,255,.9);}
@@ -350,6 +351,11 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <div class="val" id="k-cap" style="color:var(--orange)">—</div>
       <div class="sub" id="k-cap-sub">FBA+AWD 超過上限</div>
     </div>
+    <div class="card c-orange">
+      <div class="lbl">📦 滯銷庫存</div>
+      <div class="val" id="k-excess" style="color:#6D4C41">—</div>
+      <div class="sub" id="k-excess-sub">超過一年銷量（USD）</div>
+    </div>
     <div class="card c-green">
       <div class="lbl">🚢 需補海運</div>
       <div class="val" id="k-sea" style="color:var(--green)">—</div>
@@ -499,6 +505,7 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <option value="reorder">需返單</option>
       <option value="air">空運警示</option>
       <option value="cap">超過上限</option>
+      <option value="excess">有滯銷庫存</option>
       <option value="sea">需補海運</option>
     </select>
     <label>Collection</label>
@@ -519,6 +526,7 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
           <th colspan="4" class="g-fba">FBA</th>
           <th colspan="5" class="g-awd">AWD</th>
           <th colspan="2" class="g-cov">Coverage</th>
+          <th colspan="2" class="g-excess">滯銷庫存</th>
           <th colspan="12" class="g-sz">深圳倉庫（佳樂倉 + 美國倉 + 欠數）</th>
           <th colspan="5" class="g-reo">返單計畫</th>
           <th colspan="4" class="g-rep">AWD Replenishment</th>
@@ -527,7 +535,7 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
         <tr id="hdr"></tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="40" class="empty"><div class="spinner"></div> 載入中...</td></tr>
+        <tr><td colspan="42" class="empty"><div class="spinner"></div> 載入中...</td></tr>
       </tbody>
     </table>
   </div>
@@ -856,6 +864,11 @@ const COLS = [
   {k:'total_coverage',   h:'Total Coverage\nFBA+AWD(M)',w:70, a:'center', r:'covCell'},
   {k:'cap_alert',        h:'Cap 警示',                 w:78,  a:'center', r:'capTag',
       tip:'FBA+AWD Total Coverage 超過上限月數（Controls → FBA+AWD 總上限月數）'},
+  // ── 滯銷庫存 ──────────────────────────────────────────────────────────
+  {k:'excess_qty',       h:'滯銷數量',                 w:70,  a:'center', r:'excessQtyCell',
+      tip:'max(0, FBA Available + AWD Available − Sales Qty(M) × 12)\n不含在途（Inbound）'},
+  {k:'excess_value',     h:'滯銷金額\n(USD)',          w:84,  a:'center', r:'excessValueCell',
+      tip:'滯銷數量 × Anchor COG（美元）'},
   // ── 深圳倉庫（新版：美國倉 + 欠數 + 佳樂倉）─────────────────────────
   {k:'safety_stock',     h:'安全庫存\n門檻',            w:65,  a:'center', r:'safetyCell'},
   {k:'jl_qty',           h:'佳樂倉',                   w:65,  a:'center', fmt:0},
@@ -996,6 +1009,17 @@ const totalPipeCell = r => {
   if(v < 3)   return `<span style="color:var(--orange);font-weight:700">${val}</span>`;
   if(v <= cap) return `<span style="color:var(--green);font-weight:600">${val}</span>`;
   return `<span style="color:var(--text3)" title="超過 Cap ${cap}">${val}</span>`;
+};
+
+// 滯銷庫存 — 0 顯示空白，讓有積壓的列一眼可見
+const excessQtyCell = r => {
+  const v = Number(r.excess_qty) || 0;
+  return v > 0 ? `<span style="color:#6D4C41;font-weight:700">${v.toLocaleString()}</span>` : '';
+};
+const excessValueCell = r => {
+  const v = Number(r.excess_value) || 0;
+  if (v <= 0) return '';
+  return `<span style="color:#6D4C41;font-weight:700">$${v.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}</span>`;
 };
 
 const capTag = r => {
@@ -1174,7 +1198,7 @@ const skuCell = r => {
   return skuHtml;
 };
 
-const renderers = {typeTag,fbaMonthCell,awdMonthCell,covCell,replenCell,seaCell,airTag,capTag,skuCell,usMonthCell,szTotalMonthCell,transferCell,safetyCell,reorderQtyCell,reorderAlertTag,leadTimeCell,pendingCell,usVirtualMonthCell,caseReorderCell,orderDateCell,immedCovCell,totalPipeCell,orderDateOnlyCell,expectedDateCell,factoryConfirmedCell};
+const renderers = {excessQtyCell,excessValueCell,typeTag,fbaMonthCell,awdMonthCell,covCell,replenCell,seaCell,airTag,capTag,skuCell,usMonthCell,szTotalMonthCell,transferCell,safetyCell,reorderQtyCell,reorderAlertTag,leadTimeCell,pendingCell,usVirtualMonthCell,caseReorderCell,orderDateCell,immedCovCell,totalPipeCell,orderDateOnlyCell,expectedDateCell,factoryConfirmedCell};
 
 function cellVal(col, row) {
   if(col.r) return renderers[col.r](row);
@@ -1186,7 +1210,7 @@ function cellVal(col, row) {
 // ── Data & Render ─────────────────────────────────────────────────────────────
 async function loadData() {
   document.getElementById('tbody').innerHTML =
-    '<tr><td colspan="40" class="empty"><div class="spinner"></div> 載入中...</td></tr>';
+    '<tr><td colspan="42" class="empty"><div class="spinner"></div> 載入中...</td></tr>';
   try {
     // 讀當前選的 marketplace，預設 US
     const mp = document.getElementById('f-marketplace')?.value || 'ATVPDKIKX0DER';
@@ -1225,6 +1249,17 @@ async function loadData() {
     document.getElementById('k-reorder').textContent     = nReorder;
     document.getElementById('k-reorder-sub').textContent = `🔴 需返單 ｜ 🟡 佳樂告急 ${nJlLow}`;
     document.getElementById('k-air').textContent   = allData.filter(r=>r.air_alert).length;
+    // 滯銷庫存：以 ASIN 去重後加總金額（保險起見，避免同 ASIN 多列重複計算）
+    {
+      const seen = new Set(); let excessUsd = 0, excessCnt = 0;
+      for (const r of allData) {
+        if (!(Number(r.excess_qty) > 0) || seen.has(r.asin)) continue;
+        seen.add(r.asin); excessCnt++; excessUsd += Number(r.excess_value) || 0;
+      }
+      document.getElementById('k-excess').textContent =
+        '$' + Math.round(excessUsd).toLocaleString();
+      document.getElementById('k-excess-sub').textContent = `${excessCnt} 個 ASIN 超過一年銷量`;
+    }
     document.getElementById('k-cap').textContent   = allData.filter(r=>r.cap_alert==='🔴 超過上限').length;
     document.getElementById('k-sea').textContent   = allData.filter(r=>r.sea_shipment_qty>0).length;
 
@@ -1263,7 +1298,7 @@ async function loadData() {
     render();
   } catch(e) {
     document.getElementById('tbody').innerHTML =
-      `<tr><td colspan="40" class="empty">⚠️ API 連線失敗: ${e.message}</td></tr>`;
+      `<tr><td colspan="42" class="empty">⚠️ API 連線失敗: ${e.message}</td></tr>`;
   }
 }
 
@@ -1280,6 +1315,7 @@ function render() {
     if(fAlt === 'reorder' && !(r.reorder_alert||'').includes('需返單')) return false;
     if(fAlt === 'air' && !r.air_alert) return false;
     if(fAlt === 'cap' && r.cap_alert !== '🔴 超過上限') return false;
+    if(fAlt === 'excess' && !(Number(r.excess_qty) > 0)) return false;
     if(fAlt === 'sea' && !(r.sea_shipment_qty > 0)) return false;
     if(fColl && r.collection !== fColl) return false;
     return true;
@@ -1299,7 +1335,7 @@ function render() {
 
   if(!rows.length){
     document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="40" class="empty">無符合條件的資料</td></tr>';
+      '<tr><td colspan="42" class="empty">無符合條件的資料</td></tr>';
     return;
   }
 
@@ -1620,34 +1656,35 @@ function closeCfg(){ document.getElementById('cfg-modal').classList.remove('open
 function renderCfg(rows){
   document.getElementById('cfg-list').innerHTML = rows.map(r=>`
     <div class="cfg-row">
-      <div style="font-size:11px;font-weight:600">${r.sku}<br>
-        <span style="font-weight:400;color:var(--text3);font-size:10px">${r.collection||''}</span></div>
-      <select id="ct-${r.sku}" style="font-size:11px">
+      <div style="font-size:11px;font-weight:600">${r.asin}<br>
+        <span style="font-weight:400;color:var(--text3);font-size:10px">${r.sku||''} · ${r.collection||''}</span></div>
+      <select id="ct-${r.asin}" style="font-size:11px">
         <option value="" ${!r.product_type?'selected':''}>未設定</option>
         <option value="Rocket" ${r.product_type==='Rocket'?'selected':''}>🚀 Rocket</option>
         <option value="流量款" ${r.product_type==='流量款'?'selected':''}>流量款</option>
         <option value="一般款" ${r.product_type==='一般款'?'selected':''}>一般款</option>
         <option value="Discontinued" ${r.product_type==='Discontinued'?'selected':''}>⏸️ Discontinued</option>
       </select>
-      <input id="cu-${r.sku}" type="number" min="1" value="${r.unit_per_case||1}" style="font-size:11px;text-align:center">
-      <input id="ce-${r.sku}" type="text" value="${r.eta||''}" placeholder="e.g. 05/01" style="font-size:11px">
+      <input id="cu-${r.asin}" type="number" min="1" value="${r.unit_per_case||1}" style="font-size:11px;text-align:center">
+      <input id="ce-${r.asin}" type="text" value="${r.eta||''}" placeholder="e.g. 05/01" style="font-size:11px">
     </div>`).join('') || '<div class="empty">無資料</div>';
 }
 
 function filterCfg(){
   const q = document.getElementById('cfg-q').value.toLowerCase();
-  renderCfg(cfgData.filter(r=>(r.sku||'').toLowerCase().includes(q)));
+  renderCfg(cfgData.filter(r=>((r.asin||'')+' '+(r.sku||'')+' '+(r.collection||'')).toLowerCase().includes(q)));
 }
 
 async function saveCfg(){
   const payload = cfgData.map(r=>{
-    const te = document.getElementById(`ct-${r.sku}`);
+    const te = document.getElementById(`ct-${r.asin}`);
     if(!te) return null;
     return {
+      asin: r.asin,          // 設定以 Child ASIN 為 key
       sku: r.sku,
       product_type: te.value,
-      unit_per_case: parseInt(document.getElementById(`cu-${r.sku}`)?.value)||1,
-      eta: document.getElementById(`ce-${r.sku}`)?.value||'',
+      unit_per_case: parseInt(document.getElementById(`cu-${r.asin}`)?.value)||1,
+      eta: document.getElementById(`ce-${r.asin}`)?.value||'',
     };
   }).filter(Boolean);
 
@@ -1661,7 +1698,7 @@ async function saveCfg(){
     await loadData();
     // brief toast
     const t = document.createElement('div');
-    t.textContent = `✓ 已儲存 ${data.updated} 個 SKU`;
+    t.textContent = `✓ 已儲存 ${data.updated} 個 ASIN`;
     Object.assign(t.style,{position:'fixed',bottom:'20px',right:'20px',
       background:'#333',color:'#fff',padding:'10px 16px',borderRadius:'8px',
       fontSize:'13px',zIndex:'999',transition:'opacity .3s'});

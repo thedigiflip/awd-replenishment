@@ -176,6 +176,7 @@ class AwdReportService(BaseService):
 
             rows.append({
                 "sku":            sku,
+                "asin":           (row.get("ASIN") or row.get("asin") or "").strip(),   # Child ASIN（對應 key）
                 "awd_available":  avail,
                 "awd_inbound":    inbound,
                 "awd_outbound":   outbound,
@@ -200,7 +201,7 @@ class AwdReportService(BaseService):
 
         now = datetime.now(tz=timezone.utc)
         rows = [
-            (r["sku"], r["awd_available"], r["awd_inbound"], r["awd_outbound"], now)
+            (r["sku"], r["awd_available"], r["awd_inbound"], r["awd_outbound"], now, r.get("asin", ""))
             for r in parsed
         ]
 
@@ -210,13 +211,14 @@ class AwdReportService(BaseService):
                 # Report 值總是覆蓋（Strategy A）
                 conn.executemany("""
                     INSERT INTO awd_inventory
-                        (sku, awd_available, awd_inbound, awd_outbound, synced_at)
-                    VALUES (?, ?, ?, ?, ?)
+                        (sku, awd_available, awd_inbound, awd_outbound, synced_at, asin)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     ON CONFLICT (sku) DO UPDATE SET
                         awd_available = excluded.awd_available,
                         awd_inbound   = excluded.awd_inbound,
                         awd_outbound  = excluded.awd_outbound,
-                        synced_at     = excluded.synced_at
+                        synced_at     = excluded.synced_at,
+                        asin          = COALESCE(NULLIF(excluded.asin, ''), awd_inventory.asin)
                 """, rows)
                 conn.commit()
                 return len(rows)

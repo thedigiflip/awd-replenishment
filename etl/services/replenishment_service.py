@@ -144,94 +144,85 @@ class ReplenishmentService:
         try:
             rows = conn.execute("""
                 WITH
-                -- ── 全來源 SKU→ASIN 對應（Anchor + FBA + Sales）─────────────────
-                -- 用來把沒有 ASIN 欄位的 AWD 表也轉成 ASIN
-                sku_asin AS (
-                    SELECT DISTINCT sku, asin FROM product_catalog
-                    WHERE asin != '' AND sku != ''
-                    UNION
-                    -- 不限最新 snapshot — 取整個 inventory 歷史所有已知對應
-                    -- （避免 UK/DE 有 09-17 但 US 只有 09-16 時，US SKU 對應被排除）
-                    SELECT DISTINCT sku, asin FROM inventory
-                    WHERE sku IS NOT NULL AND asin IS NOT NULL
-                      AND sku != '' AND asin != ''
-                    UNION
-                    SELECT DISTINCT sku, asin FROM sales_summary
-                    WHERE report_date >= CURRENT_DATE - INTERVAL 90 DAYS
-                      AND sku != '' AND asin != ''
+                -- ════════════════════════════════════════════════════════════════
+                -- 全面以 Child ASIN 為 key（2026-10-20）
+                -- SKU 是內部編碼，跟 Amazon 上的 SKU 對不上（例：多了 " ME" 後綴、
+                -- 舊版 SKU 仍掛在同一 ASIN）。唯一可靠的對應是 Child ASIN。
+                --   - FBA / Sales / AWD Report：Amazon 直接給 ASIN
+                --   - AWD API：只給 Amazon 自己的 SKU → 用 Amazon 自己的 SKU↔ASIN 換算
+                --   - 深圳倉 template：存 ASIN（內部檔案，缺 ASIN 才用 Anchor 換算）
+                --   - 產品類型 / 箱規：asin_config（以 ASIN 為 key）
+                -- ════════════════════════════════════════════════════════════════
+
+                -- ── Anchor：一個 ASIN 一列（內部 SKU 只用來顯示）────────────────
+                anchor AS (
+                    SELECT asin, sku, parent_asin, collection, product_name, cog
+                    FROM (
+                        SELECT *, ROW_NUMBER() OVER (PARTITION BY asin ORDER BY sku) AS rn
+                        FROM product_catalog
+                        WHERE asin IS NOT NULL AND asin != ''
+                    ) WHERE rn = 1
                 ),
 
-                -- ── 每個 ASIN 有幾個 SKU（多 SKU 提示用）────────────────────────
+                -- ── Amazon 自己回報的 SKU→ASIN（只給 AWD API 換算用，不含 Anchor）──
+                amazon_sku_asin AS (
+                    SELECT sku, arg_max(asin, snapshot_date) AS asin
+                    FROM inventory
+                    WHERE sku IS NOT NULL AND sku != '' AND asin IS NOT NULL AND asin != ''
+                    GROUP BY sku
+                ),
+
+                -- ── 多 SKU 提示（純顯示）：Amazon 上這個 ASIN 掛了幾個 SKU ─────────
                 skus_per_asin AS (
-                    SELECT
-                        asin,
-                        COUNT(DISTINCT sku)                        AS sku_count,
-                        STRING_AGG(DISTINCT sku, ', ' ORDER BY sku) AS all_skus
-                    FROM sku_asin
+                    SELECT asin,
+                           COUNT(DISTINCT sku)                         AS sku_count,
+                           STRING_AGG(DISTINCT sku, ', ' ORDER BY sku) AS all_skus
+                    FROM (
+                        SELECT DISTINCT sku, asin FROM inventory
+                        WHERE sku IS NOT NULL AND sku != '' AND asin IS NOT NULL AND asin != ''
+                          AND NOT regexp_matches(sku, '^[A-Z]{2}-[A-Z0-9]{4}-[A-Z0-9]{4}$')
+                    )
                     GROUP BY asin
                 ),
 
-                -- ── FBA by ASIN（該 ASIN 所有 SKU 的庫存加總）───────────────────
-                -- ⚠️ 關鍵：MAX(snapshot_date) 必須依當前 marketplace 限縮
-                -- 否則 UK/DE 同步到 09-17、US 只有手動上傳 09-16 時，
-                -- 用「全站最大 date=09-17」查 US 資料會得到 0
-                -- ⚠️ FBA 庫存去重策略（雙重防護）：
-                -- Amazon FBA Inventory API 有兩種情況會造成同 ASIN 多筆重複：
-                -- 1) Amazon 自動 alias SKU（pattern：`XX-XXXX-XXXX`）→ regex 過濾
-                -- 2) 版本換代殘留舊 SKU（例：B0CBBL9NR7 有 MPHIPH371KH25 新版 +
-                --    MPHIPH143KH23 舊版，兩個都 147 → SUM 誤算 294）
-                --
-                -- 策略：Anchor-preferred
-                --  若 ASIN 底下有任何 SKU 存在於 Anchor → 只算 Anchor-matched
-                --  若都沒有（Anchor 尚未登記此 ASIN 的新版 SKU）→ 算所有非 alias
+                -- ── FBA by ASIN ───────────────────────────────────────────────────
+                -- MAX(snapshot_date) 依當前 marketplace 限縮（各站同步日期不同）
+                -- Amazon 對同一 ASIN 底下的每個 SKU（舊版、" ME"、Stickered…）回報的是
+                -- 同一份庫存，所以每個 ASIN 只取一個數字（MAX），不加總、不比對 SKU。
+                -- 排除 Amazon 自動產生的 alias SKU（XX-XXXX-XXXX）。
                 fba_by_asin AS (
-                    WITH filtered AS (
-                        SELECT i.*,
-                               CASE WHEN pc.sku IS NOT NULL AND pc.asin = i.asin
-                                    THEN 1 ELSE 0 END AS in_anchor
-                        FROM inventory i
-                        LEFT JOIN product_catalog pc ON pc.sku = i.sku
-                        WHERE i.snapshot_date = (
-                                  SELECT MAX(snapshot_date) FROM inventory
-                                  WHERE marketplace_id = ?
-                              )
-                          AND i.marketplace_id = ?
-                          AND i.asin IS NOT NULL AND i.asin != ''
-                          -- 過濾 Amazon auto-generated alias SKU
-                          AND NOT regexp_matches(i.sku, '^[A-Z]{2}-[A-Z0-9]{4}-[A-Z0-9]{4}$')
-                    ),
-                    anchor_flag AS (
-                        SELECT asin, MAX(in_anchor) AS has_anchor
-                        FROM filtered GROUP BY asin
-                    )
                     SELECT
-                        f.asin,
-                        SUM(f.fulfillable_quantity
-                            + COALESCE(f.reserved_fc_transfers, 0)
-                            + COALESCE(f.reserved_fc_processing, 0))              AS fba_available,
-                        SUM(f.inbound_working + f.inbound_shipped + f.inbound_receiving) AS fba_inbound
-                    FROM filtered f
-                    JOIN anchor_flag ag ON ag.asin = f.asin
-                    -- 有 Anchor 對應時只算 in_anchor=1；沒 Anchor 對應時算所有
-                    WHERE (ag.has_anchor = 1 AND f.in_anchor = 1)
-                       OR (ag.has_anchor = 0)
-                    GROUP BY f.asin
+                        asin,
+                        MAX(fulfillable_quantity
+                            + COALESCE(reserved_fc_transfers, 0)
+                            + COALESCE(reserved_fc_processing, 0))               AS fba_available,
+                        MAX(inbound_working + inbound_shipped + inbound_receiving) AS fba_inbound
+                    FROM inventory
+                    WHERE snapshot_date = (
+                              SELECT MAX(snapshot_date) FROM inventory
+                              WHERE marketplace_id = ?
+                          )
+                      AND marketplace_id = ?
+                      AND asin IS NOT NULL AND asin != ''
+                      AND NOT regexp_matches(sku, '^[A-Z]{2}-[A-Z0-9]{4}-[A-Z0-9]{4}$')
+                    GROUP BY asin
                 ),
 
-                -- ── AWD by ASIN（透過 sku_asin 轉換再加總）──────────────────────
-                -- ⚠️ AWD = Amazon Warehouse & Distribution，目前只在美國站有
-                -- 歐洲（UK/DE/FR...）沒有 AWD，只有 US（ATVPDKIKX0DER）站顯示
+                -- ── AWD by ASIN（US only）──────────────────────────────────────────
+                -- AWD Report / CSV 上傳會直接寫入 ASIN；AWD API 只給 SKU，
+                -- 用 Amazon 自己的 SKU↔ASIN 補上
                 awd_by_asin AS (
                     SELECT
-                        sa.asin,
+                        COALESCE(NULLIF(a.asin, ''), m.asin) AS asin,
                         SUM(a.awd_available)  AS awd_available,
                         SUM(a.awd_inbound)    AS awd_inbound,
                         SUM(a.awd_outbound)   AS awd_outbound,
                         MAX(a.synced_at)      AS synced_at
                     FROM awd_inventory a
-                    JOIN sku_asin sa ON a.sku = sa.sku
+                    LEFT JOIN amazon_sku_asin m ON a.sku = m.sku
                     WHERE ? = 'ATVPDKIKX0DER'   -- 非 US 站點時 CTE 為空
-                    GROUP BY sa.asin
+                      AND COALESCE(NULLIF(a.asin, ''), m.asin) IS NOT NULL
+                    GROUP BY 1
                 ),
 
                 -- ── Sales by ASIN — Reports API 優先 ────────────────────────────
@@ -262,73 +253,71 @@ class ReplenishmentService:
                     WHERE (SELECT COUNT(*) FROM sales_reports) = 0
                 ),
 
-                -- ── SZ 兩個倉庫（美國倉 + 佳樂倉），依 ASIN 加總 ─────────────
-                -- SZ 表沒有 ASIN 欄，透過 sku_asin 對應轉換
+                -- ── 深圳倉（美國倉 + 佳樂倉 + 欠數）依 ASIN ───────────────────────
+                -- sz_warehouse.asin 由上傳時寫入；舊資料缺 ASIN 才用 Anchor 內部 SKU 換算
+                sz AS (
+                    SELECT COALESCE(NULLIF(s.asin, ''), pc.asin) AS asin, s.*
+                    FROM sz_warehouse s
+                    LEFT JOIN product_catalog pc ON s.sku = pc.sku
+                ),
                 us_by_asin AS (
-                    SELECT sa.asin,
-                           SUM(sz.us_qty)      AS us_qty,
-                           SUM(sz.pending_qty) AS pending_qty,
-                           MAX(sz.order_date)  AS order_date,   -- Option A: 最新下單日
-                           MAX(sz.factory_confirmed_date) AS factory_confirmed_date,
-                           MAX(sz.synced_at)   AS synced_at
-                    FROM sz_warehouse sz
-                    JOIN sku_asin sa ON sz.sku = sa.sku
-                    GROUP BY sa.asin
+                    SELECT asin,
+                           SUM(us_qty)      AS us_qty,
+                           SUM(pending_qty) AS pending_qty,
+                           MAX(order_date)  AS order_date,
+                           MAX(factory_confirmed_date) AS factory_confirmed_date,
+                           MAX(synced_at)   AS synced_at
+                    FROM sz WHERE asin IS NOT NULL AND asin != ''
+                    GROUP BY asin
                 ),
                 jl_by_asin AS (
-                    SELECT sa.asin,
-                           SUM(sz.jl_qty) AS jl_qty
-                    FROM sz_warehouse sz
-                    JOIN sku_asin sa ON sz.sku = sa.sku
-                    GROUP BY sa.asin
+                    SELECT asin, SUM(jl_qty) AS jl_qty
+                    FROM sz WHERE asin IS NOT NULL AND asin != ''
+                    GROUP BY asin
                 ),
-                -- Unit/Case 也依 ASIN 對應（取該 ASIN 底下最大值 — 通常都相同）
                 uc_by_asin AS (
-                    SELECT sa.asin, MAX(sz.unit_per_case) AS unit_per_case
-                    FROM sz_warehouse sz
-                    JOIN sku_asin sa ON sz.sku = sa.sku
-                    WHERE sz.unit_per_case > 1
-                    GROUP BY sa.asin
+                    SELECT asin, MAX(unit_per_case) AS unit_per_case
+                    FROM sz WHERE asin IS NOT NULL AND asin != '' AND unit_per_case > 1
+                    GROUP BY asin
                 )
 
-                -- ── 主查詢：以 Anchor SKU 為列，依 ASIN 聚合外部資料 ────────────
+                -- ── 主查詢：以 Anchor 的 Child ASIN 為列 ────────────────────────────
                 SELECT
                     pc.sku,
-                    COALESCE(pc.asin,        '')                  AS asin,
+                    pc.asin                                       AS asin,
                     COALESCE(pc.parent_asin, '')                  AS parent_asin,
                     COALESCE(pc.collection,  '')                  AS collection,
                     COALESCE(pc.product_name, '')                 AS product_name,
-                    COALESCE(sc.product_type, '')                 AS product_type,
-                    COALESCE(sc.eta, '')                          AS eta,
+                    COALESCE(ac.product_type, '')                 AS product_type,
+                    COALESCE(ac.eta, '')                          AS eta,
                     COALESCE(s.sales_30d, 0)                      AS sales_30d,
                     COALESCE(f.fba_available, 0)                  AS fba_available,
                     COALESCE(f.fba_inbound, 0)                    AS fba_inbound,
                     COALESCE(a.awd_available, 0)                  AS awd_available,
                     COALESCE(a.awd_inbound, 0)                    AS awd_inbound,
                     COALESCE(a.awd_outbound, 0)                   AS awd_outbound,
-                    -- SZ 兩倉（新版：美國倉 / 佳樂倉 + 欠數 + 下單日）
                     COALESCE(us.us_qty, 0)                        AS us_qty,
                     COALESCE(us.pending_qty, 0)                   AS pending_qty,
                     us.order_date                                 AS order_date,
                     us.factory_confirmed_date                     AS factory_confirmed_date,
                     COALESCE(jl.jl_qty, 0)                        AS jl_qty,
-                    -- Unit/Case 優先用 SZ template 上傳的（單一 source of truth），沒設定回退 sku_config
-                    COALESCE(uc.unit_per_case, sc.unit_per_case, 1) AS unit_per_case,
+                    -- Unit/Case 優先用 SZ template 上傳的，沒設定回退 asin_config
+                    COALESCE(uc.unit_per_case, ac.unit_per_case, 1) AS unit_per_case,
                     a.synced_at                                   AS awd_synced_at,
                     us.synced_at                                  AS sz_synced_at,
-                    -- 多 SKU 提示欄位
                     COALESCE(sap.sku_count, 1)                    AS sku_count,
-                    COALESCE(sap.all_skus, pc.sku)                AS all_skus
-                FROM product_catalog pc
+                    COALESCE(sap.all_skus, pc.sku)                AS all_skus,
+                    -- 產品成本（Anchor COG，一律美元）—— 滯銷金額用
+                    COALESCE(pc.cog, 0)                           AS cog
+                FROM anchor pc
                 LEFT JOIN fba_by_asin    f   ON pc.asin = f.asin
                 LEFT JOIN awd_by_asin    a   ON pc.asin = a.asin
                 LEFT JOIN sales_by_asin  s   ON pc.asin = s.asin
                 LEFT JOIN us_by_asin     us  ON pc.asin = us.asin
                 LEFT JOIN jl_by_asin     jl  ON pc.asin = jl.asin
                 LEFT JOIN uc_by_asin     uc  ON pc.asin = uc.asin
-                LEFT JOIN sku_config     sc  ON pc.sku  = sc.sku
+                LEFT JOIN asin_config    ac  ON pc.asin = ac.asin
                 LEFT JOIN skus_per_asin  sap ON pc.asin = sap.asin
-                WHERE pc.asin != ''  -- Anchor 有 ASIN 才顯示（未設 ASIN 的 SKU 略過）
                 ORDER BY pc.collection NULLS LAST, pc.sku
             """, [marketplace_id, marketplace_id, marketplace_id,
                   marketplace_id, marketplace_id]).fetchall()
@@ -342,6 +331,7 @@ class ReplenishmentService:
                 "jl_qty", "unit_per_case",
                 "awd_synced_at", "sz_synced_at",
                 "sku_count", "all_skus",
+                "cog",
             ]
             return [dict(zip(cols, r)) for r in rows]
         finally:
@@ -574,6 +564,19 @@ class ReplenishmentService:
         elif fba_avail_i == 0:
             stock_alert = "🟡 FBA 斷貨"
 
+        # ── 滯銷庫存 ─────────────────────────────────────────────────────────
+        # 滯銷數量 = max(0, FBA Available + AWD Available − 年銷量)
+        #   - FBA Available 沿用 dashboard 定義（可售 + FC 調撥 + FC 處理中）
+        #   - 不含任何 inbound（只看已經在倉內的積壓）
+        #   - 年銷量 = 近 30 天銷量 × 12（淡旺季會失真，已列入日後檢討）
+        #   - AWD 只有 US 站，UK/DE 的 awd_avail 為 0
+        # 滯銷金額 = 滯銷數量 × Anchor COG（美元）；COG = 0 代表已下架，金額即為 0
+        # 屬於資訊欄位，Discontinued 也照常計算（停產品的積壓正是要看的）
+        cog          = float(r.get("cog") or 0)
+        annual_sales = sales * 12
+        excess_qty   = max(0, int(round(fba_avail + awd_avail - annual_sales)))
+        excess_value = round(excess_qty * cog, 2)
+
         # ── Discontinued（已停產）─── 全部歸零 action 欄位，只保留 informational ─
         # 邏輯：FBA + AWD 現有庫存賣完為止，不再返單/移倉/AWD 補貨/空運
         if prod_type == "Discontinued":
@@ -663,6 +666,10 @@ class ReplenishmentService:
             "air_alert":   air_alert,
             "cap_alert":   cap_alert,
             "stock_alert": stock_alert,
+            # 滯銷庫存（金額為美元）
+            "cog":           cog,
+            "excess_qty":    excess_qty,
+            "excess_value":  excess_value,
             # 資料時間
             "awd_synced_at": str(r["awd_synced_at"]) if r["awd_synced_at"] else None,
             "sz_synced_at":  str(r["sz_synced_at"])  if r["sz_synced_at"]  else None,
@@ -674,19 +681,26 @@ class ReplenishmentService:
     # ── SKU Config CRUD ───────────────────────────────────────────────────────
 
     async def upsert_sku_config(self, configs: list[dict]) -> int:
+        """產品類型 / 箱規 / ETA 存在 asin_config（以 Child ASIN 為 key）。
+        前端應傳 asin；若只傳 sku，透過 Anchor 換算成 ASIN。"""
         now = datetime.now(tz=timezone.utc)
-        rows = [
-            (c["sku"], c.get("product_type", ""), c.get("unit_per_case", 1),
-             c.get("eta", ""), now)
-            for c in configs if c.get("sku")
-        ]
 
         def _write():
             conn = new_conn()
             try:
+                sku2asin = dict(conn.execute(
+                    "SELECT sku, asin FROM product_catalog WHERE asin != ''"
+                ).fetchall())
+                rows = []
+                for c in configs:
+                    asin = (c.get("asin") or sku2asin.get(c.get("sku") or "") or "").strip()
+                    if not asin:
+                        continue
+                    rows.append((asin, c.get("product_type", ""), c.get("unit_per_case", 1),
+                                 c.get("eta", ""), now))
                 conn.executemany("""
-                    INSERT OR REPLACE INTO sku_config
-                        (sku, product_type, unit_per_case, eta, updated_at)
+                    INSERT OR REPLACE INTO asin_config
+                        (asin, product_type, unit_per_case, eta, updated_at)
                     VALUES (?, ?, ?, ?, ?)
                 """, rows)
                 conn.commit()
@@ -706,38 +720,47 @@ class ReplenishmentService:
         def _query():
             conn = new_conn()
             try:
-                # FBA SKUs not in product_catalog — 跨所有站點掃描（每站各取最新 snapshot）
-                # 舊寫法用全域 MAX(snapshot_date)，會漏掉 US 資料當 UK/DE snapshot 較新時
+                # 以 Child ASIN 判斷：Amazon 上有庫存、但 Anchor 沒有這個 ASIN
+                # （SKU 是內部編碼，不能拿來判斷是否已登記）
                 fba_rows = conn.execute("""
                     WITH latest_per_mp AS (
                         SELECT marketplace_id, MAX(snapshot_date) AS max_date
-                        FROM inventory
-                        GROUP BY marketplace_id
+                        FROM inventory GROUP BY marketplace_id
+                    ),
+                    per_mp AS (   -- 每站每 ASIN 一個數字（同 ASIN 各 SKU 回報相同庫存，取 MAX）
+                        SELECT i.marketplace_id, i.asin,
+                               ANY_VALUE(i.sku) AS sku, ANY_VALUE(i.product_name) AS product_name,
+                               MAX(i.fulfillable_quantity) AS fba_available,
+                               MAX(i.inbound_working + i.inbound_shipped + i.inbound_receiving) AS fba_inbound
+                        FROM inventory i
+                        JOIN latest_per_mp lmp
+                          ON i.marketplace_id = lmp.marketplace_id AND i.snapshot_date = lmp.max_date
+                        WHERE i.asin IS NOT NULL AND i.asin != ''
+                          AND NOT regexp_matches(i.sku, '^[A-Z]{2}-[A-Z0-9]{4}-[A-Z0-9]{4}$')
+                        GROUP BY i.marketplace_id, i.asin
                     )
-                    SELECT i.sku, ANY_VALUE(i.asin) AS asin, ANY_VALUE(i.product_name) AS product_name,
-                           SUM(i.fulfillable_quantity) AS fba_available,
-                           SUM(i.inbound_working + i.inbound_shipped + i.inbound_receiving) AS fba_inbound
-                    FROM inventory i
-                    JOIN latest_per_mp lmp
-                      ON i.marketplace_id = lmp.marketplace_id
-                     AND i.snapshot_date  = lmp.max_date
-                    WHERE i.sku IS NOT NULL AND i.sku != ''
-                      AND NOT EXISTS (
-                          SELECT 1 FROM product_catalog pc WHERE pc.sku = i.sku
-                      )
-                    GROUP BY i.sku
-                    ORDER BY i.sku
+                    SELECT ANY_VALUE(sku), asin, ANY_VALUE(product_name),
+                           SUM(fba_available), SUM(fba_inbound)
+                    FROM per_mp
+                    WHERE asin NOT IN (SELECT asin FROM product_catalog WHERE asin != '')
+                    GROUP BY asin
+                    HAVING SUM(fba_available) + SUM(fba_inbound) > 0
+                    ORDER BY asin
                 """).fetchall()
 
-                # AWD SKUs not in product_catalog
+                # AWD：ASIN 來自 AWD Report，或 Amazon 自己的 SKU↔ASIN
                 awd_rows = conn.execute("""
-                    SELECT a.sku, a.awd_available, a.awd_inbound, a.awd_outbound
-                    FROM awd_inventory a
-                    WHERE a.sku IS NOT NULL AND a.sku != ''
-                      AND NOT EXISTS (
-                          SELECT 1 FROM product_catalog pc WHERE pc.sku = a.sku
-                      )
-                    ORDER BY a.sku
+                    WITH m AS (
+                        SELECT sku, arg_max(asin, snapshot_date) AS asin FROM inventory
+                        WHERE asin IS NOT NULL AND asin != '' GROUP BY sku
+                    )
+                    SELECT a.sku, a.awd_available, a.awd_inbound, a.awd_outbound,
+                           COALESCE(NULLIF(a.asin, ''), m.asin, '') AS asin
+                    FROM awd_inventory a LEFT JOIN m ON a.sku = m.sku
+                    WHERE (a.awd_available > 0 OR a.awd_inbound > 0)
+                      AND COALESCE(NULLIF(a.asin, ''), m.asin, '') NOT IN
+                          (SELECT asin FROM product_catalog WHERE asin != '')
+                    ORDER BY 5
                 """).fetchall()
 
                 fba_unmatched = [
@@ -746,7 +769,7 @@ class ReplenishmentService:
                     for r in fba_rows
                 ]
                 awd_unmatched = [
-                    {"sku": r[0], "awd_available": r[1] or 0,
+                    {"sku": r[0], "asin": r[4] or "", "awd_available": r[1] or 0,
                      "awd_inbound": r[2] or 0, "awd_outbound": r[3] or 0}
                     for r in awd_rows
                 ]

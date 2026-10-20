@@ -49,6 +49,9 @@ _CSV_FIELDS = [
     # Coverage
     ("total_coverage",        "Total Coverage FBA+AWD (M)"),
     ("cap_alert",             "Cap 警示（FBA+AWD 總上限）"),
+    # 滯銷庫存
+    ("excess_qty",            "滯銷數量"),
+    ("excess_value",          "滯銷金額 (USD)"),
     # 深圳倉庫（美國倉 + 欠數 + 佳樂倉）
     ("safety_stock",          "安全庫存門檻"),
     ("us_qty",                "美國倉"),
@@ -140,7 +143,8 @@ async def export_csv(
 @router.post("/sku-config", summary="批量更新 SKU 設定（產品類型 + 箱規）")
 async def update_sku_config(configs: list[dict[str, Any]]):
     """
-    Body: [{"sku": "ABC-123", "product_type": "流量款", "unit_per_case": 48}, ...]
+    Body: [{"asin": "B0XXXXXXXX", "product_type": "流量款", "unit_per_case": 48}, ...]
+    以 Child ASIN 為 key 存入 asin_config；只傳 sku 時會透過 Anchor 換算成 ASIN。
     """
     count = await _svc.upsert_sku_config(configs)
     return {"status": "ok", "updated": count}
@@ -213,11 +217,16 @@ async def get_sku_config():
     def _q():
         conn = new_conn()
         try:
-            rows = conn.execute(
-                "SELECT sku, product_type, unit_per_case, eta, updated_at FROM sku_config ORDER BY sku"
-            ).fetchall()
-            return [{"sku": r[0], "product_type": r[1], "unit_per_case": r[2],
-                     "eta": r[3], "updated_at": str(r[4])} for r in rows]
+            # 設定以 Child ASIN 為 key（asin_config）；sku 只是 Anchor 內部編碼，供顯示
+            rows = conn.execute("""
+                SELECT ac.asin, ANY_VALUE(pc.sku), ac.product_type, ac.unit_per_case, ac.eta, ac.updated_at
+                FROM asin_config ac
+                LEFT JOIN product_catalog pc ON pc.asin = ac.asin
+                GROUP BY ac.asin, ac.product_type, ac.unit_per_case, ac.eta, ac.updated_at
+                ORDER BY ac.asin
+            """).fetchall()
+            return [{"asin": r[0], "sku": r[1] or "", "product_type": r[2], "unit_per_case": r[3],
+                     "eta": r[4], "updated_at": str(r[5])} for r in rows]
         finally:
             conn.close()
 

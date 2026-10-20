@@ -148,10 +148,16 @@ class AwdService(BaseService):
                 STALE_DAYS = 7  # 超過 7 天沒 sync → 歸零
 
                 # Step 1: upsert 這次 API 回傳的所有 SKU（更新 synced_at）
+                # API 只給 SKU、不給 ASIN → 不能用 INSERT OR REPLACE（會把 Report 寫入的 ASIN 清掉）
                 conn.executemany("""
-                    INSERT OR REPLACE INTO awd_inventory
+                    INSERT INTO awd_inventory
                         (sku, awd_available, awd_inbound, awd_outbound, synced_at)
                     VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT (sku) DO UPDATE SET
+                        awd_available = excluded.awd_available,
+                        awd_inbound   = excluded.awd_inbound,
+                        awd_outbound  = excluded.awd_outbound,
+                        synced_at     = excluded.synced_at
                 """, rows)
 
                 # Step 2: 把「超過 STALE_DAYS 天沒更新」的 SKU 歸零（真正沒庫存了）

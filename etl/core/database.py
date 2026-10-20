@@ -194,6 +194,17 @@ def _create_schema(conn: duckdb.DuckDBPyConnection) -> None:
             updated_at        TIMESTAMPTZ DEFAULT now()
         );
 
+        -- ── ASIN Config（產品類型 / 箱規 / ETA，以 Child ASIN 為 key）──────────
+        -- 取代 sku_config：SKU 是內部編碼、跟 Amazon 對不上，唯一可靠的 key 是 Child ASIN
+        -- sku_config 保留為舊資料，不再讀寫
+        CREATE TABLE IF NOT EXISTS asin_config (
+            asin              VARCHAR PRIMARY KEY,
+            product_type      VARCHAR DEFAULT '',
+            unit_per_case     INTEGER DEFAULT 1,
+            eta               VARCHAR DEFAULT '',
+            updated_at        TIMESTAMPTZ DEFAULT now()
+        );
+
         -- ── Product Catalog（MAGEASY Anchor 上傳，SKU ↔ ASIN/Collection/Name）──
         CREATE TABLE IF NOT EXISTS product_catalog (
             sku               VARCHAR PRIMARY KEY,
@@ -338,6 +349,15 @@ def _migrate_schema(conn: duckdb.DuckDBPyConnection) -> None:
             "sync_anomalies", "marketplace_id",
             "ALTER TABLE sync_anomalies ADD COLUMN IF NOT EXISTS marketplace_id VARCHAR DEFAULT ''"
         ),
+        # v11: 全面改以 Child ASIN 為 key
+        (
+            "sz_warehouse", "asin",
+            "ALTER TABLE sz_warehouse ADD COLUMN IF NOT EXISTS asin VARCHAR DEFAULT ''"
+        ),
+        (
+            "awd_inventory", "asin",
+            "ALTER TABLE awd_inventory ADD COLUMN IF NOT EXISTS asin VARCHAR DEFAULT ''"
+        ),
     ]
     for table, column, sql in migrations:
         try:
@@ -352,6 +372,53 @@ def _migrate_schema(conn: duckdb.DuckDBPyConnection) -> None:
 
     # ── v9: inventory PK 加入 marketplace_id（防止多站點同 SKU 互相蓋掉）───────
     _migrate_inventory_pk(conn)
+
+    # ── v11: 既有 SKU-keyed 資料回填 ASIN（只補空值，可重複執行）──────────────
+    _backfill_asin_keys(conn)
+
+
+def _backfill_asin_keys(conn: duckdb.DuckDBPyConnection) -> None:
+    """
+    把既有以 SKU 存的資料補上 Child ASIN。只填空值，已有 ASIN 的不動，重複執行無副作用。
+    - asin_config ← sku_config（經 Anchor SKU→ASIN；同 ASIN 多筆取最近更新的）
+    - sz_warehouse.asin ← Anchor（SZ template 是內部檔案，內部 SKU→ASIN 是 Anchor 的正確用途）
+    - awd_inventory.asin ← Amazon 自己的 SKU↔ASIN（FBA 庫存紀錄），不用 Anchor 內部 SKU
+    """
+    try:
+        if conn.execute("SELECT COUNT(*) FROM asin_config").fetchone()[0] == 0:
+            conn.execute("""
+                INSERT INTO asin_config (asin, product_type, unit_per_case, eta, updated_at)
+                SELECT asin, product_type, unit_per_case, eta, updated_at FROM (
+                    SELECT pc.asin, sc.product_type, sc.unit_per_case, sc.eta, sc.updated_at,
+                           ROW_NUMBER() OVER (PARTITION BY pc.asin
+                                              ORDER BY (COALESCE(sc.product_type, '') != '') DESC,
+                                                       sc.updated_at DESC NULLS LAST) AS rn
+                    FROM sku_config sc
+                    JOIN product_catalog pc ON pc.sku = sc.sku
+                    WHERE pc.asin IS NOT NULL AND pc.asin != ''
+                ) WHERE rn = 1
+            """)
+            log.info("db.asin_config_migrated",
+                     rows=conn.execute("SELECT COUNT(*) FROM asin_config").fetchone()[0])
+
+        conn.execute("""
+            UPDATE sz_warehouse SET asin = pc.asin
+            FROM product_catalog pc
+            WHERE sz_warehouse.sku = pc.sku
+              AND (sz_warehouse.asin IS NULL OR sz_warehouse.asin = '')
+              AND pc.asin != ''
+        """)
+        conn.execute("""
+            UPDATE awd_inventory SET asin = m.asin
+            FROM (
+                SELECT sku, arg_max(asin, snapshot_date) AS asin
+                FROM inventory WHERE asin IS NOT NULL AND asin != '' GROUP BY sku
+            ) m
+            WHERE awd_inventory.sku = m.sku
+              AND (awd_inventory.asin IS NULL OR awd_inventory.asin = '')
+        """)
+    except Exception as exc:
+        log.warning("db.asin_backfill_warning", error=str(exc))
 
 
 def _migrate_inventory_pk(conn: duckdb.DuckDBPyConnection) -> None:

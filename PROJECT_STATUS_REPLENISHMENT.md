@@ -102,6 +102,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 | Sales 依**幣別**分站（USD/GBP/EUR/CAD/MXN） | Amazon 銷售報表是 region 級、沒有 sales-channel 欄位。副作用：CA / MX 銷量不再混進 US |
 | AWD Total = Available + Inbound（不扣 Outbound） | Outbound 已從 available 扣除並計入 FBA inbound，再扣會重複 |
 | FBA 去重：Anchor-preferred + 過濾 `XX-XXXX-XXXX` alias SKU | Amazon API 回傳重複 alias / 舊版 SKU，造成 2–3 倍虛胖。**舊 SKU 未登記在 Anchor 則不計入**（業務決定：視為出清中的死庫存） |
+| FBA 去重補強：ASIN 在 Anchor 找不到對應 SKU 時改取 **MAX**（不 SUM）（2026-10-20） | Amazon 對同一 ASIN 的多個 SKU（舊版 SKU、加 ` ME` 後綴的 SKU）回報相同庫存，SUM 會加倍。例：B0F8V1V957 US 238 → 119 |
 | Cap 警示標題跟隨 `total_cap_months` 設定 | 原本寫死「5M」與實際設定不符；目前設定 4.0 |
 | 刪除 `finance_events` 表 + Ads / Finance / Orders(4h) workflow | Finance 表損壞且無使用端；Ads 未設定憑證 |
 | n8n workflow 一律 `settings.timezone = "UTC"` | 容器預設台灣時區會讓 cron 提早 8 小時 |
@@ -178,6 +179,9 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 - [ ] 啟用 Gmail 警示節點（需 HTTPS）
 - [ ] Secret Manager + 輪替 SP-API credentials
 - [ ] IAP 上線後刪除 `allow-dashboard-office` 防火牆規則
+
+**日後回頭檢討（circle back）**
+- [ ] 滯銷庫存的年銷量目前用「近 30 天 × 12」，淡旺季會失真；銷售資料累積到 90 天以上後，評估改用近 90 天平均或過去 12 個月實際銷量
 
 **清理（不急）**
 - [ ] 本機 `duckdb/sp_api.before-drop.duckdb`、`duckdb/backups/`

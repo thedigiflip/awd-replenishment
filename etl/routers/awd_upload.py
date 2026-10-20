@@ -87,6 +87,7 @@ async def sync_awd(background_tasks: BackgroundTasks):
             "message": "AWD inventory sync started in background"}
 
 _SKU_ALIASES      = ["SKU", "sku", "Seller SKU", "seller_sku"]
+_ASIN_ALIASES     = ["ASIN", "asin", "(Child) ASIN", "Child ASIN"]
 _AVAIL_ALIASES    = ["Available in AWD (units)", "Available Units in AWD (US)",
                      "awd_available", "available_awd", "Available in AWD"]
 _INBOUND_ALIASES  = ["Inbound to AWD (units)", "awd_inbound", "Inbound to AWD"]
@@ -146,6 +147,7 @@ async def upload_awd_inventory(file: UploadFile = File(...)):
     df.columns = [str(c).strip() for c in df.columns]
 
     sku_col      = _find_col(df, _SKU_ALIASES)
+    asin_col     = _find_col(df, _ASIN_ALIASES)   # Child ASIN（對應 key）
     avail_col    = _find_col(df, _AVAIL_ALIASES)
     inbound_col  = _find_col(df, _INBOUND_ALIASES)
     outbound_col = _find_col(df, _OUTBOUND_ALIASES)
@@ -171,6 +173,7 @@ async def upload_awd_inventory(file: UploadFile = File(...)):
             _safe_int(row.get(inbound_col))  if inbound_col  else 0,
             _safe_int(row.get(outbound_col)) if outbound_col else 0,
             now,
+            (str(row.get(asin_col)).strip() if asin_col and pd.notna(row.get(asin_col)) else ""),
         ))
 
     if not rows:
@@ -180,9 +183,15 @@ async def upload_awd_inventory(file: UploadFile = File(...)):
         conn = new_conn()
         try:
             conn.executemany("""
-                INSERT OR REPLACE INTO awd_inventory
-                    (sku, awd_available, awd_inbound, awd_outbound, synced_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO awd_inventory
+                    (sku, awd_available, awd_inbound, awd_outbound, synced_at, asin)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT (sku) DO UPDATE SET
+                    awd_available = excluded.awd_available,
+                    awd_inbound   = excluded.awd_inbound,
+                    awd_outbound  = excluded.awd_outbound,
+                    synced_at     = excluded.synced_at,
+                    asin          = COALESCE(NULLIF(excluded.asin, ''), awd_inventory.asin)
             """, rows)
             conn.commit()
             return len(rows)
@@ -203,7 +212,7 @@ async def upload_awd_inventory(file: UploadFile = File(...)):
     log.info("awd_inventory.uploaded", rows=count, file=file.filename)
     return JSONResponse({"status": "ok", "rows_upserted": count, "file": file.filename,
                          "columns_detected": {
-                             "sku": sku_col, "available": avail_col,
+                             "sku": sku_col, "asin": asin_col, "available": avail_col,
                              "inbound": inbound_col, "outbound": outbound_col
                          },
                          "note": "已記錄為 AWD Report 事件，健康度 panel 會反映"})
