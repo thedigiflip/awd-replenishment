@@ -352,9 +352,14 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <div class="sub" id="k-cap-sub">FBA+AWD 超過上限</div>
     </div>
     <div class="card c-orange">
-      <div class="lbl">📦 滯銷庫存</div>
+      <div class="lbl">📦 滯銷庫存數</div>
+      <div class="val" id="k-excess-qty" style="color:#6D4C41">—</div>
+      <div class="sub" id="k-excess-qty-sub">超過一年銷量的件數</div>
+    </div>
+    <div class="card c-orange">
+      <div class="lbl">💰 滯銷金額</div>
       <div class="val" id="k-excess" style="color:#6D4C41">—</div>
-      <div class="sub" id="k-excess-sub">超過一年銷量（USD）</div>
+      <div class="sub" id="k-excess-sub">USD（滯銷數量 × COG）</div>
     </div>
     <div class="card c-green">
       <div class="lbl">🚢 需補海運</div>
@@ -1251,14 +1256,18 @@ async function loadData() {
     document.getElementById('k-air').textContent   = allData.filter(r=>r.air_alert).length;
     // 滯銷庫存：以 ASIN 去重後加總金額（保險起見，避免同 ASIN 多列重複計算）
     {
-      const seen = new Set(); let excessUsd = 0, excessCnt = 0;
+      const seen = new Set(); let excessUsd = 0, excessQty = 0, excessCnt = 0;
       for (const r of allData) {
         if (!(Number(r.excess_qty) > 0) || seen.has(r.asin)) continue;
-        seen.add(r.asin); excessCnt++; excessUsd += Number(r.excess_value) || 0;
+        seen.add(r.asin); excessCnt++;
+        excessQty += Number(r.excess_qty)   || 0;
+        excessUsd += Number(r.excess_value) || 0;
       }
+      document.getElementById('k-excess-qty').textContent     = excessQty.toLocaleString();
+      document.getElementById('k-excess-qty-sub').textContent = `${excessCnt} 個 ASIN 超過一年銷量`;
       document.getElementById('k-excess').textContent =
         '$' + Math.round(excessUsd).toLocaleString();
-      document.getElementById('k-excess-sub').textContent = `${excessCnt} 個 ASIN 超過一年銷量`;
+      document.getElementById('k-excess-sub').textContent = 'USD（滯銷數量 × COG）';
     }
     document.getElementById('k-cap').textContent   = allData.filter(r=>r.cap_alert==='🔴 超過上限').length;
     document.getElementById('k-sea').textContent   = allData.filter(r=>r.sea_shipment_qty>0).length;
