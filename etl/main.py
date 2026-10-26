@@ -16,6 +16,7 @@ from core.database import init_db, close_db
 from core.db_meta import init_meta_db
 from routers import orders, inventory, ads, finance
 from routers import replenishment, sz_warehouse, awd_upload, product_catalog, sales, traffic, fees, health
+from routers import excess_inventory
 
 log = structlog.get_logger()
 
@@ -65,6 +66,7 @@ app.include_router(product_catalog.router, prefix="/etl/catalog", tags=["Catalog
 # ─── Replenishment API ────────────────────────────────────────────────────────
 app.include_router(replenishment.router, prefix="/replenishment",   tags=["Replenishment"])
 app.include_router(health.router,        prefix="/etl/health",       tags=["Data Health"])
+app.include_router(excess_inventory.router, prefix="/excess-inventory", tags=["Excess Inventory"])
 
 # ─── Static files (Dashboard) ────────────────────────────────────────────────
 if os.path.isdir(STATIC_DIR):

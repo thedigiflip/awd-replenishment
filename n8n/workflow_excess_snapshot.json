@@ -1,0 +1,94 @@
+{
+  "name": "Excess Inventory | Daily Snapshot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 15 * * *"
+            }
+          ]
+        }
+      },
+      "id": "trigger-excess-snapshot",
+      "name": "Every Day 15:00 UTC (23:00 Taiwan)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://etl:8000/excess-inventory/snapshot",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "take-excess-snapshot",
+      "name": "Take Excess Snapshot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 60000
+    },
+    {
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "summary",
+              "stringValue": "=✅ Excess snapshot {{ $json.snapshot_date }} | rows={{ $json.rows }} | value=${{ $json.excess_value }} | qty={{ $json.excess_qty }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-excess-snapshot",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        680,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Every Day 15:00 UTC (23:00 Taiwan)": {
+      "main": [
+        [
+          {
+            "node": "Take Excess Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Take Excess Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Log Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC"
+  }
+}

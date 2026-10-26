@@ -89,6 +89,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 | Traffic 月報 | 每月 2 號 11:00 | `sales_traffic` |
 | FBA Fees 月報 | 每月 2 號 12:00 | `product_catalog.fba_fee` |
 | Traffic Backfill | 手動 | `sales_traffic` |
+| Excess Inventory — Daily Snapshot | 每天 23:00 | `fact_excess_inventory_daily`（跨境滯銷水位，見 `PROJECT_STATUS_EXCESS.md`） |
 
 兩個 Gmail 節點目前**停用**（主 ETL、AWD Report），等 HTTPS 設好後再啟用。
 
@@ -107,6 +108,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 | 刪除 `finance_events` 表 + Ads / Finance / Orders(4h) workflow | Finance 表損壞且無使用端；Ads 未設定憑證 |
 | n8n workflow 一律 `settings.timezone = "UTC"` | 容器預設台灣時區會讓 cron 提早 8 小時 |
 | `docker-compose.prod.yml` 分離雲端設定 | 本機用 `./duckdb`、雲端用 `/data`，`git pull` 不衝突 |
+| US 站補貨銷量併入 CA + MX（2026-10-26） | 北美遠程配送：CA / MX 訂單由 US FBA 庫存出貨，CA / MX 沒有自己的 FBA 庫存。驗證：只有 34 個有 CA/MX 銷量的 ASIN 改變，銷量增加量 = CA+MX 出貨量（30 天共 96 件）；UK / DE 0 差異。若日後 CA / MX 改為自有 FBA 庫存，移除 `replenishment_service.SALES_MARKETPLACES` 的對應即可 |
+| 補貨頁 KPI：滯銷改名「AMZN滯銷數量 / 金額」，移除「需補海運」「深圳倉」卡（2026-10-26） | 與市管處的「全通路滯銷」（獨立分頁）區分 |
 
 ---
 

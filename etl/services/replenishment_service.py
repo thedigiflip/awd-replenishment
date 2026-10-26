@@ -21,6 +21,13 @@ from core.database import new_conn, db_write
 
 log = structlog.get_logger()
 
+# 補貨計算的銷量來源：key 站點的 FBA 庫存要供應哪些站點的訂單
+# 北美遠程配送（Remote Fulfillment with FBA）：CA / MX 訂單由 US FBA 庫存出貨 → 併入 US
+# CA / MX 本身沒有 FBA 庫存，所以不會單獨出現在補貨頁
+SALES_MARKETPLACES: dict[str, list[str]] = {
+    "ATVPDKIKX0DER": ["ATVPDKIKX0DER", "A2EUQ1WTGCTBG2", "A1AM78C64UM0Y8"],  # US + CA + MX
+}
+
 # ── Controls 預設值（DB 沒有資料時使用）──────────────────────────────────────
 _DEFAULT_CONTROLS = {
     "production_days":         30.0,
@@ -139,6 +146,8 @@ class ReplenishmentService:
         - FBA / Sales 已有 ASIN，直接依 ASIN 加總
         - AWD 沒有 ASIN，透過所有已知來源建 SKU→ASIN 對應後再加總
         """
+        # 銷量來源站點：US 併入 CA / MX（北美遠程配送，由 US FBA 庫存出貨）
+        sales_mps = SALES_MARKETPLACES.get(marketplace_id, [marketplace_id])
         conn = new_conn()
         try:
             rows = conn.execute("""
@@ -212,11 +221,12 @@ class ReplenishmentService:
                 ),
 
                 -- ── Sales by ASIN — Reports API 優先 ────────────────────────────
+                -- US 站含 CA / MX 銷量（北美遠程配送：CA/MX 訂單由 US FBA 庫存出貨）
                 sales_reports AS (
                     SELECT asin, SUM(units_sold) AS sales_30d
                     FROM sales_summary
                     WHERE report_date >= CURRENT_DATE - INTERVAL 30 DAYS
-                      AND marketplace_id = ?
+                      AND list_contains(?, marketplace_id)
                       AND asin != ''
                     GROUP BY asin
                 ),
@@ -227,7 +237,7 @@ class ReplenishmentService:
                     JOIN orders o ON oi.amazon_order_id = o.amazon_order_id
                     WHERE o.purchase_date >= NOW() - INTERVAL '30 days'
                       AND o.order_status NOT IN ('Canceled', 'Cancelled')
-                      AND o.marketplace_id = ?
+                      AND list_contains(?, o.marketplace_id)
                       AND oi.asin IS NOT NULL AND oi.asin != ''
                     GROUP BY oi.asin
                 ),
@@ -303,7 +313,7 @@ class ReplenishmentService:
                 LEFT JOIN asin_config    ac  ON pc.asin = ac.asin
                 ORDER BY pc.collection NULLS LAST, pc.sku
             """, [marketplace_id, marketplace_id, marketplace_id,
-                  marketplace_id, marketplace_id]).fetchall()
+                  sales_mps, sales_mps]).fetchall()
 
             cols = [
                 "sku", "asin", "parent_asin", "collection", "product_name",

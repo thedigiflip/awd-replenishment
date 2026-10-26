@@ -108,9 +108,9 @@ The **Replenishment** feature was built before these principles were agreed.
 | Layer | Target | Today |
 |---|---|---|
 | Bronze | `fact_*` tables per source | Tables exist with older names: `inventory`, `awd_inventory`, `sales_summary`, `orders`, `order_items`, `sales_traffic`, `sz_warehouse` |
-| Dimensions | `dim_product`, `dim_params` | `product_catalog` (Anchor), `asin_config`, `replenishment_controls` play this role |
-| Silver | Per-channel views | **Not yet.** Aggregations (FBA by ASIN, AWD by ASIN, sales by ASIN, SZ by ASIN) are CTEs inside one large query in `services/replenishment_service.py` |
-| Gold | Cross-source views | **Not yet.** The same query joins everything for the dashboard |
+| Dimensions | `dim_product`, `dim_params` | ✅ `dim_product` (view over Anchor) and `dim_params` exist (2026-10-26). Replenishment still uses `product_catalog`, `asin_config`, `replenishment_controls` directly |
+| Silver | Per-channel views | ✅ Created 2026-10-26 in `core/warehouse_views.py`: `vw_silver_amazon_fba_by_asin`, `vw_silver_amazon_awd_by_asin`, `vw_silver_amazon_sales_by_asin` (30d + previous 30d, per marketplace), `vw_silver_sz_by_asin`. Used by Excess Inventory. **Replenishment still uses its own CTEs** (identical definitions, verified 0 differences per ASIN) |
+| Gold | Cross-source views | ✅ `vw_gold_excess_inventory` (Excess Inventory). Replenishment: not yet |
 | Business rules | Python | ✅ Already in Python (`ReplenishmentService._compute`) |
 | Product key | Child ASIN | ✅ Done (2026-10-20 migration) |
 
@@ -119,12 +119,10 @@ dashboard reads through the API layer.
 
 ### Planned migration (incremental, no big-bang rewrite)
 
-1. When building **Traffic** (the next feature), extract the shared aggregations from
-   `replenishment_service.py` into Silver views, e.g. `vw_silver_amazon_fba_by_asin`,
-   `vw_silver_amazon_awd_by_asin`, `vw_silver_amazon_sales_by_asin`. Replenishment and
-   Traffic then read the same views instead of duplicating SQL.
-2. Introduce `dim_product` (view over `product_catalog`, one row per Child ASIN) and
-   `dim_params` (currency, thresholds).
+1. ✅ Done (2026-10-26, with Excess Inventory): shared Silver views and `dim_product` /
+   `dim_params` live in `core/warehouse_views.py`. **Traffic must reuse these views**
+   (and add new ones there) instead of creating a second set.
+2. Move currency / other thresholds into `dim_params` as features need them.
 3. Point the replenishment query at the Silver views — business rules in `_compute`
    stay unchanged.
 4. Verify with the per-ASIN snapshot comparison (§6) before deploying.

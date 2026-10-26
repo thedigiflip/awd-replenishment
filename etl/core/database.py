@@ -291,6 +291,10 @@ def _create_schema(conn: duckdb.DuckDBPyConnection) -> None:
     # versions. DuckDB 1.1.x supports "ADD COLUMN IF NOT EXISTS".
     _migrate_schema(conn)
 
+    # ── Warehouse layers（dim / Silver / Gold views）— 需在欄位 migration 之後 ──
+    from core.warehouse_views import create_warehouse_objects
+    create_warehouse_objects(conn)
+
     log.info("duckdb.schema_ready")
 
 

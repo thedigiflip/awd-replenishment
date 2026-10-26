@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>跨境滯銷水位 — MAGEASY eCom Dashboard</title>
+<!--
+  跨境滯銷水位（Excess Inventory）— 獨立頁面，嵌在 dashboard.html 的分頁（iframe）
+  資料：GET /excess-inventory（vw_gold_excess_inventory）、GET /excess-inventory/trend（每日快照）
+  定義（逐 Child ASIN 計算後加總，美國倉只算一次）：
+    全通路滯銷數量 = max(0, FBA Available(US+UK+DE) + AWD Available + 美國倉 − 全通路 30 天銷量 × 12)
+    全通路滯銷金額 = 滯銷數量 × Anchor COG（USD）
+-->
+<style>
+:root{
+  --bg:#F4F4F4;--card:#FFFFFF;--border:#E0E0E0;
+  --primary:#4E79A7;--primary-dk:#3A6694;--primary-lt:#EBF3FA;
+  --green:#59A14F;--green-bg:#EEF7ED;--orange:#F28E2B;--orange-bg:#FEF6ED;
+  --red:#E15759;--red-bg:#FDEEED;--brown:#6D4C41;--brown-bg:#EFEBE9;
+  --text:#2C2C2C;--text2:#5C5C5C;--text3:#9E9E9E;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',-apple-system,Arial,sans-serif;background:var(--bg);color:var(--text);
+  font-size:12px;letter-spacing:.01em;}
+.page{padding:14px 20px;}
+
+/* header */
+.hdr{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.hdr h2{font-size:15px;font-weight:700;}
+.hdr .def{font-size:11px;color:var(--text2);background:#fff;border:1px solid var(--border);
+  border-radius:5px;padding:4px 10px;}
+.fresh{font-size:10px;color:var(--text3);}
+.spacer{flex:1;}
+.btn{padding:6px 14px;border-radius:5px;border:1px solid var(--border);cursor:pointer;font-size:11px;
+  font-weight:600;background:#fff;color:var(--primary);display:inline-flex;align-items:center;gap:5px;}
+.btn:hover{background:var(--primary-lt);border-color:var(--primary);}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary);}
+.btn-primary:hover{background:var(--primary-dk);}
+
+/* KPI cards */
+.cards{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.card{background:var(--card);border-radius:6px;padding:13px 16px;border:1px solid var(--border);
+  box-shadow:var(--shadow-sm);min-width:170px;flex:1;}
+.card .lbl{font-size:10px;color:var(--text3);margin-bottom:4px;letter-spacing:.06em;font-weight:600;}
+.card .val{font-size:22px;font-weight:700;}
+.card .sub{font-size:10px;color:var(--text3);margin-top:3px;}
+.card.c-brown{border-left:3px solid var(--brown);}
+.card.c-red{border-left:3px solid var(--red);}
+.card.c-orange{border-left:3px solid var(--orange);}
+.card.c-blue{border-left:3px solid var(--primary);}
+.bm-bar{height:6px;background:#EEE;border-radius:3px;margin-top:6px;overflow:hidden;}
+.bm-bar > div{height:100%;background:var(--green);}
+
+/* chart panels */
+.grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:12px;margin-bottom:12px;}
+.grid2b{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+@media (max-width:1100px){.grid2,.grid2b{grid-template-columns:1fr;}}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px 14px;
+  box-shadow:var(--shadow-sm);min-width:0;}
+.panel-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.panel-hdr .t{font-size:12px;font-weight:700;color:var(--text2);}
+.panel-hdr .h{font-size:10px;color:var(--text3);}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:5px;overflow:hidden;}
+.seg button{border:none;background:#fafafa;padding:3px 10px;font-size:10px;font-weight:600;
+  color:var(--text2);cursor:pointer;}
+.seg button.on{background:var(--primary);color:#fff;}
+.chart-box{position:relative;height:260px;}
+.chart-box.sm{height:200px;}
+.chart-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  text-align:center;color:var(--text3);font-size:11px;line-height:1.7;padding:20px;}
+
+/* filters + table */
+.toolbar{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:9px 14px;
+  margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:var(--shadow-sm);}
+.chip{padding:4px 10px;border:1px solid var(--border);border-radius:14px;background:#fafafa;
+  font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;}
+.chip.on{background:var(--brown);border-color:var(--brown);color:#fff;}
+.chip.on.red{background:var(--red);border-color:var(--red);}
+.chip.on.orange{background:var(--orange);border-color:var(--orange);}
+.toolbar .cnt{font-size:11px;color:var(--text2);}
+.tbl-wrap{background:var(--card);border:1px solid var(--border);border-radius:6px;overflow:auto;
+  max-height:calc(100vh - 140px);box-shadow:var(--shadow-sm);}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px;}
+thead th{position:sticky;background:#1F2D3D;color:#E8ECF0;padding:7px 9px;text-align:center;
+  white-space:nowrap;font-size:10px;font-weight:600;border-right:1px solid rgba(255,255,255,.08);}
+thead tr.h1 th{top:0;z-index:11;cursor:pointer;user-select:none;height:40px;}
+thead tr.h1 th:hover{background:#2D4057;}
+thead tr.h1 th.asc::after{content:" ↑";}
+thead tr.h1 th.dsc::after{content:" ↓";}
+thead tr.h1 th.g-ex{background:#4E342E;}
+thead tr.h2 th{top:40px;z-index:10;background:#2A3B4F;padding:4px 5px;}
+thead tr.h2 input,thead tr.h2 select{width:100%;min-width:60px;border:1px solid rgba(255,255,255,.2);
+  border-radius:3px;padding:3px 5px;font-size:10px;background:#fff;color:var(--text);outline:none;}
+tbody tr:nth-child(even){background:#FAFAFA;}
+tbody tr:hover{background:#EEF5FB !important;}
+tbody td{padding:6px 9px;border-bottom:1px solid #EEE;text-align:center;white-space:nowrap;
+  font-variant-numeric:tabular-nums;}
+tbody td.left{text-align:left;}
+tbody td.name{text-align:left;min-width:180px;max-width:300px;white-space:normal;word-break:break-word;line-height:1.4;}
+tbody td.sku{font-weight:700;text-align:left;}
+tfoot td{position:sticky;bottom:0;background:#ECEFF1;font-weight:700;padding:7px 9px;
+  border-top:2px solid #B0BEC5;text-align:center;font-variant-numeric:tabular-nums;}
+.ex-q{color:var(--brown);font-weight:700;}
+.ex-v{color:var(--brown);font-weight:700;}
+.muted{color:var(--text3);}
+.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;margin:1px;}
+.b-24{background:#4E342E;color:#fff;}
+.b-18{background:#8D6E63;color:#fff;}
+.b-12{background:#D7CCC8;color:#4E342E;}
+.b-nos{background:#37474F;color:#fff;}
+.b-pot{background:var(--orange-bg);color:#E65100;}
+.b-ok{background:var(--green-bg);color:var(--green);}
+.b-none{background:#F5F5F5;color:var(--text3);}
+.b-red{background:var(--red-bg);color:var(--red);}
+.b-gray{background:#ECEFF1;color:#546E7A;}
+.b-hero{background:#E8EAF6;color:#3949AB;}
+.b-norm{background:#F3E5F5;color:#7B1FA2;}
+.b-rocket{background:#FFE082;color:#BF360C;}
+.up{color:var(--green);font-weight:600;}
+.dn{color:var(--red);font-weight:600;}
+.loc{font-size:10px;color:var(--text2);}
+.loc b{color:var(--text);}
+.empty{text-align:center;padding:50px 20px;color:var(--text3);}
+
+/* modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;}
+.modal-overlay.open{display:flex;align-items:center;justify-content:center;}
+.modal{background:#fff;border-radius:12px;width:460px;padding:22px;}
+.modal h3{font-size:14px;font-weight:700;margin-bottom:6px;}
+.modal .hint{font-size:11px;color:var(--text2);margin-bottom:14px;line-height:1.6;}
+.frow{display:grid;grid-template-columns:1fr 150px;gap:10px;align-items:center;padding:8px 0;
+  border-bottom:1px solid var(--border);font-size:12px;}
+.frow input{width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;}
+.modal-footer{margin-top:16px;display:flex;gap:8px;justify-content:flex-end;align-items:center;}
+.msg{font-size:11px;font-weight:600;margin-right:auto;}
+.msg.err{color:var(--red);} .msg.ok{color:var(--green);}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="hdr">
+    <h2>📉 跨境滯銷水位</h2>
+    <span class="def" title="逐 Child ASIN 計算後加總；美國倉每個 ASIN 只算一次；在途（Inbound）與欠數不列入庫存池">
+      全通路滯銷 = max(0, FBA Available(US+UK+DE) + AWD Available + 美國倉 − 全通路 30 天銷量 × <span id="def-m">12</span>)
+    </span>
+    <span class="spacer"></span>
+    <span class="fresh" id="fresh">載入中…</span>
+    <button class="btn" onclick="loadAll()">🔄 重新整理</button>
+    <button class="btn" onclick="openParams()">🎛️ Benchmark 設定</button>
+    <button class="btn btn-primary" onclick="exportCsv()">⬇ 匯出 CSV</button>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="cards">
+    <div class="card c-brown">
+      <div class="lbl">📦 全通路滯銷數量</div>
+      <div class="val" id="k-qty" style="color:var(--brown)">—</div>
+      <div class="sub" id="k-qty-sub">—</div>
+    </div>
+    <div class="card c-brown">
+      <div class="lbl">💰 全通路滯銷金額</div>
+      <div class="val" id="k-val" style="color:var(--brown)">—</div>
+      <div class="sub" id="k-val-sub">—</div>
+      <div class="bm-bar" id="k-bm-bar" style="display:none"><div id="k-bm-fill"></div></div>
+    </div>
+    <div class="card c-blue">
+      <div class="lbl">🔢 滯銷 ASIN 數</div>
+      <div class="val" id="k-asins">—</div>
+      <div class="sub" id="k-asins-sub">—</div>
+    </div>
+    <div class="card c-red">
+      <div class="lbl">⚠️ 滯銷仍在補貨</div>
+      <div class="val" id="k-rep" style="color:var(--red)">—</div>
+      <div class="sub">有欠數或 FBA / AWD 在途</div>
+    </div>
+    <div class="card c-orange">
+      <div class="lbl">🟡 潛在滯銷</div>
+      <div class="val" id="k-pot" style="color:var(--orange)">—</div>
+      <div class="sub">可銷 9–12 個月（提早預警）</div>
+    </div>
+  </div>
+
+  <!-- Trend + Pie -->
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-hdr">
+        <span class="t">滯銷金額水位趨勢</span>
+        <span class="h" id="trend-hint">每月取月底水位（當月為最新）；紅色虛線 = 市管處 Benchmark</span>
+        <span class="spacer"></span>
+        <div class="seg" id="seg-grain">
+          <button class="on" data-v="month" onclick="setGrain('month')">月</button>
+          <button data-v="day" onclick="setGrain('day')">日</button>
+        </div>
+      </div>
+      <div class="chart-box"><canvas id="c-trend"></canvas><div class="chart-empty" id="trend-empty" style="display:none"></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-hdr">
+        <span class="t">滯銷來源 — Collection</span>
+        <span class="h">點擊色塊可篩選明細</span>
+        <span class="spacer"></span>
+        <div class="seg" id="seg-pie">
+          <button class="on" data-v="value" onclick="setPieMetric('value')">金額</button>
+          <button data-v="qty" onclick="setPieMetric('qty')">數量</button>
+        </div>
+      </div>
+      <div class="chart-box"><canvas id="c-pie"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Location + Tier -->
+  <div class="grid2b">
+    <div class="panel">
+      <div class="panel-hdr">
+        <span class="t">滯銷在哪裡</span>
+        <span class="h" title="一年內預計賣掉的貨，會先從最靠近客戶的位置消化（FBA → AWD → 美國倉），所以滯銷依序歸在 美國倉 → AWD → FBA">分配規則：先算美國倉，再 AWD，最後 FBA ⓘ</span>
+      </div>
+      <div class="chart-box sm"><canvas id="c-loc"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-hdr">
+        <span class="t">可銷月數分級</span>
+        <span class="h">可銷月數 = 庫存池 ÷ 全通路月銷量；點擊長條可篩選明細</span>
+      </div>
+      <div class="chart-box sm"><canvas id="c-tier"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <span class="chip on" id="chip-excess" onclick="toggleChip('excess')">Excess Inventory</span>
+    <span class="chip" id="chip-rep" onclick="toggleChip('rep')">⚠️ 仍在補貨</span>
+    <span class="chip" id="chip-pot" onclick="toggleChip('pot')">🟡 潛在滯銷</span>
+    <span class="spacer"></span>
+    <span class="cnt" id="row-count"></span>
+    <button class="btn" onclick="clearFilters()">清除篩選</button>
+  </div>
+
+  <!-- Table -->
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr class="h1" id="thead-1"></tr>
+        <tr class="h2" id="thead-2"></tr>
+      </thead>
+      <tbody id="tbody"><tr><td colspan="30" class="empty">載入中…</td></tr></tbody>
+      <tfoot id="tfoot"></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- Params modal -->
+<div class="modal-overlay" id="params-modal">
+  <div class="modal">
+    <h3>🎛️ 市管處滯銷水位 Benchmark</h3>
+    <div class="hint">Benchmark 會以紅色虛線畫在趨勢圖上，並在「全通路滯銷金額」卡片顯示使用率。設為 0 代表尚未設定。</div>
+    <div class="frow"><label for="p-bm">滯銷金額 Benchmark（USD）</label><input type="number" id="p-bm" min="0" step="1000"></div>
+    <div class="frow"><label for="p-m">年銷量 = 30 天銷量 × N 個月</label><input type="number" id="p-m" min="1" step="1"></div>
+    <div class="modal-footer">
+      <span class="msg" id="p-msg"></span>
+      <button class="btn" onclick="closeParams()">取消</button>
+      <button class="btn btn-primary" onclick="saveParams()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+// State
+// ════════════════════════════════════════════════════════════════════════════
+let RAW = null;            // GET /excess-inventory
+let TREND = null;          // GET /excess-inventory/trend
+let grain = 'month';
+let pieMetric = 'value';
+let sortKey = 'excess_value', sortAsc = false;
+const chips = {excess: true, rep: false, pot: false};
+const colFilters = {};     // key → value
+const charts = {};
+
+const TIERS = ['12–18M', '18–24M', '24M+', '無銷量', '潛在滯銷 9–12M'];
+const TIER_CLS = {'24M+':'b-24','18–24M':'b-18','12–18M':'b-12','無銷量':'b-nos',
+                  '潛在滯銷 9–12M':'b-pot','正常':'b-ok','無庫存':'b-none'};
+const TIER_COLOR = {'12–18M':'#BCAAA4','18–24M':'#8D6E63','24M+':'#4E342E','無銷量':'#37474F',
+                    '潛在滯銷 9–12M':'#F28E2B'};
+const PALETTE = ['#4E79A7','#F28E2B','#E15759','#76B7B2','#59A14F','#EDC948','#B07AA1','#FF9DA7','#BAB0AC'];
+
+// ════════════════════════════════════════════════════════════════════════════
+// Formatters
+// ════════════════════════════════════════════════════════════════════════════
+const fInt = v => (v == null ? '—' : Math.round(v).toLocaleString('en-US'));
+const fUsd = v => (v == null ? '—' : '$' + Math.round(v).toLocaleString('en-US'));
+const fUsdK = v => {
+  if (v == null) return '—';
+  const a = Math.abs(v);
+  if (a >= 1e6) return '$' + (v/1e6).toFixed(2) + 'M';
+  if (a >= 1e3) return '$' + (v/1e3).toFixed(1) + 'K';
+  return '$' + Math.round(v);
+};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const z = v => (v ? fInt(v) : '<span class="muted">0</span>');
+
+// ════════════════════════════════════════════════════════════════════════════
+// Columns（明細欄位；f = filter 類型）
+// ════════════════════════════════════════════════════════════════════════════
+const COLS = [
+  {k:'parent_asin',  h:'Parent ASIN', f:'text', cls:'left'},
+  {k:'asin',         h:'Child ASIN',  f:'text', cls:'left'},
+  {k:'sku',          h:'SKU',         f:'text', cls:'sku'},
+  {k:'collection',   h:'Collection',  f:'select', cls:'left'},
+  {k:'product_name', h:'Name',        f:'text', cls:'name'},
+  {k:'product_type', h:'產品類型',     f:'select', r: r => typeBadge(r.product_type)},
+  {k:'amazon_30d',   h:'Amazon 銷量\n(30天)', num:true, tot:true,
+     tip:'US + CA + MX + UK + DE 近 30 天出貨量',
+     r: r => `<span title="US ${r.sales_us_30d} · CA ${r.sales_ca_30d} · MX ${r.sales_mx_30d} · UK ${r.sales_uk_30d} · DE ${r.sales_de_30d}">${z(r.amazon_30d)}</span>`},
+  {k:'annual_sales', h:'全通路\n年銷量', num:true, tot:true, tip:'全通路 30 天銷量 × 12（目前全通路 = Amazon）', r: r => z(r.annual_sales)},
+  {k:'sales_trend_pct', h:'銷量趨勢\n(vs 前30天)', num:true, f:'select', fv: r => trendLabel(r),
+     tip:'近 30 天 vs 前 30 天（第 31–60 天）全通路銷量', r: r => trendCell(r)},
+  {k:'fba_available', h:'FBA\nAvailable', num:true, tot:true, tip:'US + UK + DE（滑鼠移上去看各站）',
+     r: r => `<span title="US ${r.fba_us} · UK ${r.fba_uk} · DE ${r.fba_de}">${z(r.fba_available)}</span>`},
+  {k:'awd_available', h:'AWD\nAvailable', num:true, tot:true, r: r => z(r.awd_available)},
+  {k:'us_qty',        h:'美國倉',       num:true, tot:true, r: r => z(r.us_qty)},
+  {k:'stock_total',   h:'庫存池\n合計', num:true, tot:true, tip:'FBA Available + AWD Available + 美國倉', r: r => `<b>${z(r.stock_total)}</b>`},
+  {k:'months_of_supply', h:'可銷\n月數', num:true, tip:'庫存池 ÷ 全通路 30 天銷量',
+     sortv: r => r.months_of_supply ?? (r.stock_total > 0 ? 1e9 : -1),   // 有庫存但無銷量 = ∞
+     r: r => r.months_of_supply == null ? (r.stock_total > 0 ? '<span class="muted">∞</span>' : '<span class="muted">—</span>') : r.months_of_supply.toFixed(1)},
+  {k:'supply_tier',   h:'等級', f:'select', r: r => `<span class="badge ${TIER_CLS[r.supply_tier]||'b-none'}">${esc(r.supply_tier)}</span>`},
+  {k:'cog',           h:'COG\n(USD)', num:true, r: r => r.cog ? r.cog.toFixed(2) : '<span class="badge b-gray" title="Anchor COG = 0（已下架），滯銷金額會是 0">0 / 下架</span>'},
+  {k:'excess_qty',    h:'全通路\n滯銷數量', num:true, tot:true, g:'ex', r: r => r.excess_qty ? `<span class="ex-q">${fInt(r.excess_qty)}</span>` : '<span class="muted">—</span>'},
+  {k:'excess_value',  h:'全通路\n滯銷金額 (USD)', num:true, tot:true, money:true, g:'ex', r: r => r.excess_value ? `<span class="ex-v">${fUsd(r.excess_value)}</span>` : '<span class="muted">—</span>'},
+  {k:'excess_loc',    h:'滯銷位置', g:'ex', f:'select', fv: r => locLabel(r), sortv: r => r.excess_in_us_wh,
+     tip:'滯銷分配：先算美國倉 → AWD → FBA', r: r => locCell(r)},
+];
+
+function typeBadge(t){
+  if (!t) return '<span class="muted">—</span>';
+  const c = t.includes('Rocket') ? 'b-rocket' : (t === '流量款' ? 'b-hero' : 'b-norm');
+  return `<span class="badge ${c}">${esc(t)}</span>`;
+}
+function trendLabel(r){
+  if (r.sales_trend_pct == null) return r.all_channel_30d > 0 ? '新增銷量' : '無銷量';
+  if (r.sales_trend_pct >= 20) return '加速 ↑';
+  if (r.sales_trend_pct <= -20) return '放緩 ↓';
+  return '持平';
+}
+function trendCell(r){
+  if (r.sales_trend_pct == null) return r.all_channel_30d > 0 ? '<span class="up">新增</span>' : '<span class="muted">—</span>';
+  const p = r.sales_trend_pct, s = (p > 0 ? '+' : '') + p.toFixed(0) + '%';
+  const tip = `近30天 ${r.all_channel_30d} / 前30天 ${r.all_channel_prev_30d}`;
+  if (p >= 20) return `<span class="up" title="${tip}">${s} ↑</span>`;
+  if (p <= -20) return `<span class="dn" title="${tip}">${s} ↓</span>`;
+  return `<span title="${tip}">${s}</span>`;
+}
+function locLabel(r){
+  if (!r.excess_qty) return '—';
+  const parts = [];
+  if (r.excess_in_us_wh) parts.push('美國倉');
+  if (r.excess_in_awd) parts.push('AWD');
+  if (r.excess_in_fba) parts.push('FBA');
+  return parts.join('+');
+}
+function locCell(r){
+  if (!r.excess_qty) return '<span class="muted">—</span>';
+  const p = [];
+  if (r.excess_in_us_wh) p.push(`美國倉 <b>${fInt(r.excess_in_us_wh)}</b>`);
+  if (r.excess_in_awd)   p.push(`AWD <b>${fInt(r.excess_in_awd)}</b>`);
+  if (r.excess_in_fba)   p.push(`FBA <b>${fInt(r.excess_in_fba)}</b>`);
+  return `<span class="loc">${p.join(' · ')}</span>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Load
+// ════════════════════════════════════════════════════════════════════════════
+async function loadAll(){
+  try {
+    const [a, t] = await Promise.all([
+      fetch('/excess-inventory').then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }),
+      fetch('/excess-inventory/trend?grain=' + grain).then(r => r.json()),
+    ]);
+    RAW = a; TREND = t;
+    renderKpis(); renderTrend(); renderPie(); renderLoc(); renderTier();
+    buildHeader(); renderTable();
+    const f = a.freshness || {};
+    document.getElementById('fresh').textContent =
+      `資料：FBA US ${f.fba_us||'—'} · UK ${f.fba_uk||'—'} · DE ${f.fba_de||'—'} ｜ AWD ${f.awd||'—'} ｜ 美國倉 ${f.us_warehouse||'—'} ｜ 銷量 ${f.sales||'—'}`;
+  } catch (e) {
+    document.getElementById('tbody').innerHTML = `<tr><td colspan="30" class="empty">❌ 載入失敗：${esc(e.message)}</td></tr>`;
+  }
+}
+
+function benchmark(){ return (RAW && RAW.params.excess_benchmark_usd || {}).value || 0; }
+function annualMonths(){ return (RAW && RAW.params.excess_annual_months || {}).value || 12; }
+
+// ════════════════════════════════════════════════════════════════════════════
+// KPI
+// ════════════════════════════════════════════════════════════════════════════
+function renderKpis(){
+  const s = RAW.summary, bm = benchmark();
+  document.getElementById('def-m').textContent = annualMonths();
+  document.getElementById('k-qty').textContent = fInt(s.excess_qty);
+  const pct = s.stock_total ? (s.excess_qty / s.stock_total * 100).toFixed(1) : 0;
+  document.getElementById('k-qty-sub').textContent = `佔庫存池 ${pct}%（庫存池 ${fInt(s.stock_total)} 件）`;
+  document.getElementById('k-val').textContent = fUsd(s.excess_value);
+  const bar = document.getElementById('k-bm-bar'), fill = document.getElementById('k-bm-fill');
+  if (bm > 0) {
+    const u = s.excess_value / bm * 100;
+    const diff = s.excess_value - bm;
+    document.getElementById('k-val-sub').innerHTML = diff > 0
+      ? `<span style="color:var(--red);font-weight:700">超出 Benchmark ${fUsd(diff)}</span>（${u.toFixed(0)}% / ${fUsdK(bm)}）`
+      : `Benchmark ${fUsdK(bm)} 的 ${u.toFixed(0)}%（尚有 ${fUsd(-diff)} 空間）`;
+    bar.style.display = 'block';
+    fill.style.width = Math.min(100, u) + '%';
+    fill.style.background = u > 100 ? 'var(--red)' : (u > 85 ? 'var(--orange)' : 'var(--green)');
+  } else {
+    document.getElementById('k-val-sub').textContent = 'USD（滯銷數量 × COG）｜Benchmark 尚未設定';
+    bar.style.display = 'none';
+  }
+  const withStock = RAW.data.filter(r => r.stock_total > 0).length;
+  document.getElementById('k-asins').textContent = fInt(s.excess_asins);
+  document.getElementById('k-asins-sub').textContent = `有庫存的 ASIN 共 ${withStock} 個`;
+  document.getElementById('k-rep').textContent = fInt(s.still_replenishing);
+  document.getElementById('k-pot').textContent = fInt(s.potential_asins);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Charts
+// ════════════════════════════════════════════════════════════════════════════
+function mkChart(id, cfg){
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), cfg);
+}
+
+function setGrain(g){
+  grain = g;
+  document.querySelectorAll('#seg-grain button').forEach(b => b.classList.toggle('on', b.dataset.v === g));
+  document.getElementById('trend-hint').textContent = g === 'month'
+    ? '每月取月底水位（當月為最新）；紅色虛線 = 市管處 Benchmark'
+    : '每日快照；紅色虛線 = 市管處 Benchmark';
+  fetch('/excess-inventory/trend?grain=' + g).then(r => r.json()).then(t => { TREND = t; renderTrend(); });
+}
+
+function renderTrend(){
+  const series = (TREND && TREND.series) || [];
+  const bm = benchmark();
+  const empty = document.getElementById('trend-empty');
+  if (!series.length) {
+    empty.style.display = 'flex';
+    empty.innerHTML = '尚無快照資料。<br>系統每天 23:00（台灣時間）自動記錄一次滯銷水位，<br>第一個點會在今晚產生；之後每月累積一個點。';
+    if (charts['c-trend']) { charts['c-trend'].destroy(); delete charts['c-trend']; }
+    return;
+  }
+  empty.style.display = 'none';
+  const labels = series.map(s => s.period);
+  const ds = [{
+    label: '全通路滯銷金額', data: series.map(s => s.excess_value),
+    borderColor: '#6D4C41', backgroundColor: 'rgba(109,76,65,.12)', fill: true,
+    tension: .25, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2,
+  }];
+  if (bm > 0) ds.push({
+    label: '市管處 Benchmark', data: labels.map(() => bm),
+    borderColor: '#E15759', borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false,
+  });
+  mkChart('c-trend', {
+    type: 'line',
+    data: {labels, datasets: ds},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: {mode: 'index', intersect: false},
+      plugins: {
+        legend: {position: 'bottom', labels: {boxWidth: 12, font: {size: 10}}},
+        tooltip: {callbacks: {
+          label: c => `${c.dataset.label}: ${fUsd(c.parsed.y)}`,
+          afterBody: items => {
+            const s = series[items[0].dataIndex];
+            const lines = [`滯銷數量: ${fInt(s.excess_qty)}`, `快照日: ${s.as_of}`];
+            if (items.length && bm > 0) lines.push(`Benchmark 使用率: ${(s.excess_value / bm * 100).toFixed(0)}%`);
+            return lines;
+          },
+        }},
+      },
+      scales: {
+        y: {beginAtZero: true, ticks: {callback: v => fUsdK(v), font: {size: 10}}},
+        x: {ticks: {font: {size: 10}}},
+      },
+    },
+  });
+}
+
+function setPieMetric(m){
+  pieMetric = m;
+  document.querySelectorAll('#seg-pie button').forEach(b => b.classList.toggle('on', b.dataset.v === m));
+  renderPie();
+}
+
+function pieGroups(){
+  const key = pieMetric === 'value' ? 'excess_value' : 'excess_qty';
+  const agg = {};
+  RAW.data.forEach(r => { if (r[key] > 0) { const c = r.collection || '(未分類)'; agg[c] = (agg[c] || 0) + r[key]; } });
+  const arr = Object.entries(agg).sort((a, b) => b[1] - a[1]);
+  const top = arr.slice(0, 8), rest = arr.slice(8);
+  const restSum = rest.reduce((s, x) => s + x[1], 0);
+  if (restSum > 0) top.push([`其他（${rest.length} 個）`, restSum, rest.map(x => x[0])]);
+  return top;
+}
+
+function renderPie(){
+  const groups = pieGroups();
+  const total = groups.reduce((s, g) => s + g[1], 0);
+  const isVal = pieMetric === 'value';
+  mkChart('c-pie', {
+    type: 'doughnut',
+    data: {
+      labels: groups.map(g => g[0]),
+      datasets: [{data: groups.map(g => g[1]), backgroundColor: groups.map((_, i) => PALETTE[i % PALETTE.length]),
+                  borderWidth: 1, borderColor: '#fff'}],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '50%',
+      plugins: {
+        legend: {position: 'right', labels: {boxWidth: 10, font: {size: 10},
+          generateLabels: ch => ch.data.labels.map((l, i) => ({
+            text: `${l}  ${total ? (ch.data.datasets[0].data[i] / total * 100).toFixed(0) : 0}%`,
+            fillStyle: ch.data.datasets[0].backgroundColor[i], strokeStyle: '#fff', index: i,
+          }))}},
+        tooltip: {callbacks: {label: c => {
+          const v = c.parsed, p = total ? (v / total * 100).toFixed(1) : 0;
+          return `${c.label}: ${isVal ? fUsd(v) : fInt(v) + ' 件'}（${p}%）`;
+        }}},
+      },
+      onClick: (e, els) => {
+        if (!els.length) return;
+        const g = groups[els[0].index];
+        if (g[2]) return;                         // 「其他」不篩選
+        colFilters.collection = g[0] === '(未分類)' ? '' : g[0];
+        chips.excess = true; syncChips();
+        buildHeader(); renderTable(); scrollToTable();
+      },
+    },
+  });
+}
+
+function renderLoc(){
+  const s = RAW.summary;
+  const labels = ['美國倉', 'AWD', 'FBA (US+UK+DE)'];
+  const vals = [s.value_us_wh, s.value_awd, s.value_fba];
+  const qtys = [s.qty_us_wh, s.qty_awd, s.qty_fba];
+  const tot = vals.reduce((a, b) => a + b, 0);
+  mkChart('c-loc', {
+    type: 'bar',
+    data: {labels, datasets: [{data: vals, backgroundColor: ['#33691E', '#BF360C', '#0D47A1'], borderRadius: 4}]},
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {legend: {display: false}, tooltip: {callbacks: {
+        label: c => `${fUsd(c.parsed.x)}（${tot ? (c.parsed.x / tot * 100).toFixed(0) : 0}%）｜${fInt(qtys[c.dataIndex])} 件`}}},
+      scales: {x: {beginAtZero: true, ticks: {callback: v => fUsdK(v), font: {size: 10}}},
+               y: {ticks: {font: {size: 11, weight: '600'},
+                   callback: function(v, i){ return `${labels[i]}  ${fUsdK(vals[i])} · ${tot ? (vals[i]/tot*100).toFixed(0) : 0}%`; }}}},
+    },
+  });
+}
+
+function renderTier(){
+  const cnt = {}, val = {};
+  TIERS.forEach(t => { cnt[t] = 0; val[t] = 0; });
+  RAW.data.forEach(r => { if (r.supply_tier in cnt) { cnt[r.supply_tier]++; val[r.supply_tier] += r.excess_value || 0; } });
+  mkChart('c-tier', {
+    type: 'bar',
+    data: {labels: TIERS, datasets: [{label: 'ASIN 數', data: TIERS.map(t => cnt[t]),
+      backgroundColor: TIERS.map(t => TIER_COLOR[t]), borderRadius: 4}]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {legend: {display: false}, tooltip: {callbacks: {
+        label: c => `${c.parsed.y} 個 ASIN`,
+        afterLabel: c => { const t = TIERS[c.dataIndex]; return t.startsWith('潛在') ? '目前尚未滯銷（提早預警）' : `滯銷金額 ${fUsd(val[t])}`; },
+      }}},
+      scales: {y: {beginAtZero: true, ticks: {precision: 0, font: {size: 10}}}, x: {ticks: {font: {size: 10}}}},
+      onClick: (e, els) => {
+        if (!els.length) return;
+        const t = TIERS[els[0].index];
+        colFilters.supply_tier = t;
+        chips.excess = !t.startsWith('潛在'); chips.pot = false; syncChips();
+        buildHeader(); renderTable(); scrollToTable();
+      },
+    },
+  });
+}
+
+function scrollToTable(){ document.querySelector('.toolbar').scrollIntoView({behavior: 'smooth'}); }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Table
+// ════════════════════════════════════════════════════════════════════════════
+function filterValue(c, r){ return c.fv ? c.fv(r) : (r[c.k] ?? ''); }
+
+function buildHeader(){
+  const h1 = COLS.map(c => {
+    const cls = [c.g === 'ex' ? 'g-ex' : '', sortKey === c.k ? (sortAsc ? 'asc' : 'dsc') : ''].join(' ');
+    return `<th class="${cls}" data-k="${c.k}" title="${esc(c.tip || '點擊排序')}">${esc(c.h).replace(/\n/g, '<br>')}</th>`;
+  }).join('');
+  document.getElementById('thead-1').innerHTML = h1;
+  document.querySelectorAll('#thead-1 th').forEach(th => th.onclick = () => {
+    const k = th.dataset.k;
+    if (sortKey === k) sortAsc = !sortAsc; else { sortKey = k; sortAsc = !COLS.find(c => c.k === k).num; }
+    buildHeader(); renderTable();
+  });
+
+  const h2 = COLS.map(c => {
+    const cur = colFilters[c.k] ?? '';
+    if (c.f === 'text') return `<th><input type="text" data-k="${c.k}" value="${esc(cur)}" placeholder="搜尋"></th>`;
+    if (c.f === 'select') {
+      const opts = [...new Set(RAW.data.map(r => String(filterValue(c, r))))].sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+      const o = ['<option value="">全部</option>'].concat(opts.map(v =>
+        `<option value="${esc(v)}" ${v === String(cur) && cur !== '' ? 'selected' : ''}>${esc(v || '(空白)')}</option>`));
+      return `<th><select data-k="${c.k}">${o.join('')}</select></th>`;
+    }
+    return '<th></th>';
+  }).join('');
+  document.getElementById('thead-2').innerHTML = h2;
+  document.querySelectorAll('#thead-2 input').forEach(el => el.oninput = () => { colFilters[el.dataset.k] = el.value; renderTable(); });
+  document.querySelectorAll('#thead-2 select').forEach(el => el.onchange = () => {
+    if (el.value === '') delete colFilters[el.dataset.k]; else colFilters[el.dataset.k] = el.value;
+    renderTable();
+  });
+}
+
+function filteredRows(){
+  let rows = RAW.data.slice();
+  const POT = '潛在滯銷 9–12M';
+  if (chips.pot) rows = rows.filter(r => r.supply_tier === POT);
+  else if (chips.excess && colFilters.supply_tier !== POT) rows = rows.filter(r => r.excess_qty > 0);
+  if (chips.rep) rows = rows.filter(r => r.still_replenishing);
+  for (const [k, v] of Object.entries(colFilters)) {
+    if (v === undefined) continue;
+    const c = COLS.find(x => x.k === k);
+    if (!c) continue;
+    if (c.f === 'text') {
+      const q = String(v).trim().toLowerCase();
+      if (q) rows = rows.filter(r => String(r[k] ?? '').toLowerCase().includes(q));
+    } else {
+      rows = rows.filter(r => String(filterValue(c, r)) === String(v));
+    }
+  }
+  const c = COLS.find(x => x.k === sortKey) || {};
+  const sv = c.sortv || (r => r[sortKey]);
+  rows.sort((a, b) => {
+    let x = sv(a), y = sv(b);
+    if (x == null) x = sortAsc ? Infinity : -Infinity;
+    if (y == null) y = sortAsc ? Infinity : -Infinity;
+    if (typeof x === 'string' || typeof y === 'string') return sortAsc ? String(x).localeCompare(String(y)) : String(y).localeCompare(String(x));
+    return sortAsc ? x - y : y - x;
+  });
+  return rows;
+}
+
+function renderTable(){
+  const rows = filteredRows();
+  document.getElementById('row-count').textContent = `顯示 ${rows.length} / ${RAW.data.length} 個 ASIN`;
+  const tb = document.getElementById('tbody');
+  if (!rows.length) {
+    tb.innerHTML = `<tr><td colspan="${COLS.length}" class="empty">沒有符合條件的產品</td></tr>`;
+    document.getElementById('tfoot').innerHTML = '';
+    return;
+  }
+  tb.innerHTML = rows.map(r => '<tr>' + COLS.map(c => {
+    const v = c.r ? c.r(r) : esc(r[c.k]);
+    return `<td class="${c.cls || ''}">${v}</td>`;
+  }).join('') + '</tr>').join('');
+
+  // 合計列（篩選後）
+  const tot = {};
+  COLS.filter(c => c.tot).forEach(c => tot[c.k] = rows.reduce((s, r) => s + (r[c.k] || 0), 0));
+  document.getElementById('tfoot').innerHTML = '<tr>' + COLS.map((c, i) => {
+    if (i === 0) return '<td style="text-align:left">合計</td>';
+    if (!c.tot) return '<td></td>';
+    return `<td>${c.money ? fUsd(tot[c.k]) : fInt(tot[c.k])}</td>`;
+  }).join('') + '</tr>';
+}
+
+function toggleChip(k){
+  chips[k] = !chips[k];
+  if (k === 'pot' && chips.pot) chips.excess = false;     // 潛在滯銷本身不是滯銷
+  if (k === 'excess' && chips.excess) chips.pot = false;
+  syncChips(); renderTable();
+}
+function syncChips(){
+  document.getElementById('chip-excess').classList.toggle('on', chips.excess);
+  const rep = document.getElementById('chip-rep'); rep.classList.toggle('on', chips.rep); rep.classList.toggle('red', chips.rep);
+  const pot = document.getElementById('chip-pot'); pot.classList.toggle('on', chips.pot); pot.classList.toggle('orange', chips.pot);
+}
+function clearFilters(){
+  for (const k of Object.keys(colFilters)) delete colFilters[k];
+  chips.excess = true; chips.rep = false; chips.pot = false;
+  syncChips(); buildHeader(); renderTable();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CSV（篩選後的明細；欄位順序同畫面，最後附上拆分欄位）
+// ════════════════════════════════════════════════════════════════════════════
+const CSV_COLS = [
+  ['parent_asin', 'Parent ASIN'], ['asin', 'Child ASIN'], ['sku', 'SKU'], ['collection', 'Collection'],
+  ['product_name', 'Name'], ['product_type', '產品類型'],
+  ['amazon_30d', 'Amazon 銷量 (30天)'], ['annual_sales', '全通路年銷量'], ['sales_trend_pct', '銷量趨勢 % (vs 前30天)'],
+  ['fba_available', 'FBA Available'], ['awd_available', 'AWD Available'], ['us_qty', '美國倉'],
+  ['stock_total', '庫存池合計'], ['months_of_supply', '可銷月數'], ['supply_tier', '等級'], ['cog', 'COG (USD)'],
+  ['excess_qty', '全通路滯銷數量'], ['excess_value', '全通路滯銷金額 (USD)'],
+  ['excess_in_us_wh', '滯銷位置-美國倉'], ['excess_in_awd', '滯銷位置-AWD'], ['excess_in_fba', '滯銷位置-FBA'],
+  ['still_replenishing', '仍在補貨'], ['pending_qty', '欠數'], ['fba_inbound', 'FBA 在途'], ['awd_inbound', 'AWD 在途'],
+  // 拆分明細
+  ['sales_us_30d', '銷量 US (30天)'], ['sales_ca_30d', '銷量 CA (30天)'], ['sales_mx_30d', '銷量 MX (30天)'],
+  ['sales_uk_30d', '銷量 UK (30天)'], ['sales_de_30d', '銷量 DE (30天)'], ['all_channel_prev_30d', '全通路銷量 (前30天)'],
+  ['fba_us', 'FBA US'], ['fba_uk', 'FBA UK'], ['fba_de', 'FBA DE'],
+];
+function exportCsv(){
+  if (!RAW) return;
+  const rows = filteredRows();
+  const q = v => { const s = v == null ? '' : (v === true ? 'Y' : v === false ? '' : String(v)); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const lines = [CSV_COLS.map(c => q(c[1])).join(',')].concat(rows.map(r => CSV_COLS.map(c => q(r[c[0]])).join(',')));
+  const blob = new Blob(['﻿' + lines.join('\n')], {type: 'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `excess_inventory_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Params modal
+// ════════════════════════════════════════════════════════════════════════════
+function openParams(){
+  document.getElementById('p-bm').value = benchmark();
+  document.getElementById('p-m').value = annualMonths();
+  document.getElementById('p-msg').textContent = '';
+  document.getElementById('params-modal').classList.add('open');
+}
+function closeParams(){ document.getElementById('params-modal').classList.remove('open'); }
+async function saveParams(){
+  const msg = document.getElementById('p-msg');
+  const bm = parseFloat(document.getElementById('p-bm').value), m = parseFloat(document.getElementById('p-m').value);
+  if (!(bm >= 0) || !(m > 0)) { msg.className = 'msg err'; msg.textContent = '請輸入有效數字'; return; }
+  try {
+    const r = await fetch('/excess-inventory/params', {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({excess_benchmark_usd: bm, excess_annual_months: m})});
+    if (!r.ok) throw new Error((await r.json()).detail || r.status);
+    msg.className = 'msg ok'; msg.textContent = '✅ 已儲存';
+    await loadAll();
+    setTimeout(closeParams, 600);
+  } catch (e) { msg.className = 'msg err'; msg.textContent = '❌ ' + e.message; }
+}
+
+loadAll();
+</script>
+</body>
+</html>

@@ -323,6 +323,7 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
 <div class="tab-nav">
   <button class="tab-btn active" data-tab="replenishment" onclick="switchTab('replenishment')">📦 補貨儀表板</button>
   <button class="tab-btn" data-tab="traffic" onclick="switchTab('traffic')">📊 流量分析</button>
+  <button class="tab-btn" data-tab="excess" onclick="switchTab('excess')">📉 跨境滯銷水位</button>
 </div>
 
 <!-- Tab: Replenishment (existing) -->
@@ -361,11 +362,6 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <div class="val" id="k-excess" style="color:#6D4C41">—</div>
       <div class="sub" id="k-excess-sub">USD（AMZN滯銷數量 × COG）</div>
     </div>
-    <div class="card c-green">
-      <div class="lbl">🚢 需補海運</div>
-      <div class="val" id="k-sea" style="color:var(--green)">—</div>
-      <div class="sub">建議海運量 &gt; 0</div>
-    </div>
     <div class="card c-blue">
       <div class="lbl">📦 Catalog</div>
       <div class="val" id="k-cat">—</div>
@@ -375,11 +371,6 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <div class="lbl">🏭 AWD 同步</div>
       <div class="val" id="k-awd">—</div>
       <div class="sub" id="k-awd-sub">尚未同步</div>
-    </div>
-    <div class="card c-green">
-      <div class="lbl">📦 深圳倉</div>
-      <div class="val" id="k-sz">—</div>
-      <div class="sub" id="k-sz-sub">尚未上傳</div>
     </div>
   </div>
 
@@ -740,6 +731,12 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
 </div>
 </div><!-- /tab-traffic -->
 
+<!-- Tab: 跨境滯銷水位（獨立頁面 static/excess_inventory.html，第一次切換時才載入）-->
+<div id="tab-excess" class="tab-content">
+  <iframe id="excess-frame" data-src="/static/excess_inventory.html" title="跨境滯銷水位"
+          style="width:100%;height:calc(100vh - 96px);border:0;display:block;"></iframe>
+</div>
+
 <!-- Controls Modal -->
 <div class="modal-overlay" id="ctrl-modal">
   <div class="modal" style="width:480px">
@@ -854,7 +851,8 @@ const COLS = [
   {k:'product_name',     h:'Name',                    w:220, a:'left', name:true},
   {k:'product_type',     h:'産品類型',                 w:72,  a:'center', r:'typeTag'},
   {k:'awd_target_months',h:'AWD目標月',               w:58,  a:'center', fmt:1},
-  {k:'sales_qty',        h:'Sales Qty (M)',            w:70,  a:'center', fmt:0},
+  {k:'sales_qty',        h:'Sales Qty (M)',            w:70,  a:'center', fmt:0,
+      tip:'近 30 天出貨量。US 站含 CA + MX（北美遠程配送，由 US FBA 庫存出貨）'},
   {k:'fba_available',    h:'FBA Available\n(現貨)',     w:65,  a:'center', fmt:0},
   {k:'fba_inbound',      h:'FBA Inbound\n(在途)',      w:65,  a:'center', fmt:0},
   {k:'fba_total',        h:'FBA Total\n(現貨+在途)',   w:65,  a:'center', fmt:0},
@@ -1263,7 +1261,6 @@ async function loadData() {
       document.getElementById('k-excess-sub').textContent = 'USD（AMZN滯銷數量 × COG）';
     }
     document.getElementById('k-cap').textContent   = allData.filter(r=>r.cap_alert==='🔴 超過上限').length;
-    document.getElementById('k-sea').textContent   = allData.filter(r=>r.sea_shipment_qty>0).length;
 
     document.getElementById('k-cat').textContent   = cat.total_skus||0;
     document.getElementById('k-cat-sub').textContent = cat.last_upload
@@ -1275,10 +1272,6 @@ async function loadData() {
       ? '同步:'+awdDate.substring(0,10)
       : (awd.run&&awd.run.status==='running')?'⏳ 同步中...':'尚未同步';
 
-    document.getElementById('k-sz').textContent    = sz.total_skus||0;
-    document.getElementById('k-sz-sub').textContent = sz.last_upload
-      ? `更新:${sz.last_upload.substring(0,10)} (${sz.days_old ?? '?'}天前)`
-      : '尚未上傳';
     // 過期警示（>7 天沒更新）
     const stale = document.getElementById('sz-stale-warn');
     if(sz.is_stale && sz.days_old !== null){
@@ -1791,6 +1784,12 @@ function switchTab(tab) {
   document.querySelectorAll('.tab-content').forEach(c =>
     c.classList.toggle('active', c.id === 'tab-' + tab));
   if (tab === 'traffic' && !trafficRaw) loadTraffic();
+  if (tab === 'excess') {
+    const fr = document.getElementById('excess-frame');
+    if (!fr.src) fr.src = fr.dataset.src;
+  }
+  // 頂部按鈕（重新整理 / SKU 設定 / 水位設定 / 匯出 CSV）屬於補貨；滯銷分頁有自己的按鈕
+  document.querySelectorAll('.topbar .btn').forEach(b => b.style.display = tab === 'excess' ? 'none' : '');
 }
 
 // ════════════════════════════════════════════════════════════════════════════
