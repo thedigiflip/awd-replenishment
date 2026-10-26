@@ -52,7 +52,7 @@
 | Gold | `vw_gold_excess_inventory`（一 Child ASIN 一列，所有計算都在這裡） | 同上 |
 | Fact | `fact_excess_inventory_daily`（每日快照，存組成數字） | 同上 |
 | Service / API | `/excess-inventory`、`/trend`、`/snapshot`、`/params` | `etl/services/excess_inventory_service.py`、`etl/routers/excess_inventory.py` |
-| 頁面 | 獨立 HTML，以 iframe 嵌在 dashboard 分頁「📉 跨境滯銷水位」 | `etl/static/excess_inventory.html` |
+| 頁面 | 獨立 HTML，以 iframe 嵌在 dashboard 分頁「📉 Excess Inventory」（位於「📦 Replenishment」右邊） | `etl/static/excess_inventory.html` |
 | 排程 | 每天 23:00（台灣）寫快照 | `n8n/workflow_excess_snapshot.json` |
 
 - Silver view 的定義與補貨 CTE 完全相同；上線前逐 ASIN 比對 3 站 FBA / AWD / 美國倉 / 銷量 / COG：**0 差異**

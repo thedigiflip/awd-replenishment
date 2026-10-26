@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>跨境滯銷水位 — MAGEASY eCom Dashboard</title>
+<title>Excess Inventory — MAGEASY eCom Dashboard</title>
 <!--
   跨境滯銷水位（Excess Inventory）— 獨立頁面，嵌在 dashboard.html 的分頁（iframe）
   資料：GET /excess-inventory（vw_gold_excess_inventory）、GET /excess-inventory/trend（每日快照）
@@ -143,7 +143,7 @@ tfoot td{position:sticky;bottom:0;background:#ECEFF1;font-weight:700;padding:7px
 
   <!-- Header -->
   <div class="hdr">
-    <h2>📉 跨境滯銷水位</h2>
+    <h2>📉 Excess Inventory</h2>
     <span class="def" title="逐 Child ASIN 計算後加總；美國倉每個 ASIN 只算一次；在途（Inbound）與欠數不列入庫存池">
       全通路滯銷 = max(0, FBA Available(US+UK+DE) + AWD Available + 美國倉 − 全通路 30 天銷量 × <span id="def-m">12</span>)
     </span>

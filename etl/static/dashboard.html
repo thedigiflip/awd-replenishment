@@ -321,9 +321,9 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
 
 <!-- Tab Navigation -->
 <div class="tab-nav">
-  <button class="tab-btn active" data-tab="replenishment" onclick="switchTab('replenishment')">📦 補貨儀表板</button>
+  <button class="tab-btn active" data-tab="replenishment" onclick="switchTab('replenishment')">📦 Replenishment</button>
+  <button class="tab-btn" data-tab="excess" onclick="switchTab('excess')">📉 Excess Inventory</button>
   <button class="tab-btn" data-tab="traffic" onclick="switchTab('traffic')">📊 流量分析</button>
-  <button class="tab-btn" data-tab="excess" onclick="switchTab('excess')">📉 跨境滯銷水位</button>
 </div>
 
 <!-- Tab: Replenishment (existing) -->
@@ -731,9 +731,9 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
 </div>
 </div><!-- /tab-traffic -->
 
-<!-- Tab: 跨境滯銷水位（獨立頁面 static/excess_inventory.html，第一次切換時才載入）-->
+<!-- Tab: Excess Inventory（獨立頁面 static/excess_inventory.html，第一次切換時才載入）-->
 <div id="tab-excess" class="tab-content">
-  <iframe id="excess-frame" data-src="/static/excess_inventory.html" title="跨境滯銷水位"
+  <iframe id="excess-frame" data-src="/static/excess_inventory.html" title="Excess Inventory"
           style="width:100%;height:calc(100vh - 96px);border:0;display:block;"></iframe>
 </div>
 

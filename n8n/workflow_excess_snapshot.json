@@ -1,4 +1,6 @@
 {
+  "id": "excessSnapshot01",
+  "active": false,
   "name": "Excess Inventory | Daily Snapshot",
   "nodes": [
     {
