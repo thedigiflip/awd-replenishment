@@ -88,9 +88,6 @@ _CSV_FIELDS = [
     ("days_can_last",         "現有可撐天數"),
     ("lead_time_days",        "生產交期 (天)"),
     ("case_reorder_count",    "返單箱數"),
-    # 同 ASIN 多 SKU 資訊
-    ("sku_count",             "SKU 數 (同 ASIN)"),
-    ("all_skus",              "全部 alias SKUs"),
 ]
 
 

@@ -138,7 +138,6 @@ class ReplenishmentService:
         - Anchor 提供 SKU → ASIN 對應（權威來源）
         - FBA / Sales 已有 ASIN，直接依 ASIN 加總
         - AWD 沒有 ASIN，透過所有已知來源建 SKU→ASIN 對應後再加總
-        - 一個 ASIN 對應多個 SKU 時，sku_count > 1，all_skus 會列出全部
         """
         conn = new_conn()
         try:
@@ -172,19 +171,6 @@ class ReplenishmentService:
                     GROUP BY sku
                 ),
 
-                -- ── 多 SKU 提示（純顯示）：Amazon 上這個 ASIN 掛了幾個 SKU ─────────
-                skus_per_asin AS (
-                    SELECT asin,
-                           COUNT(DISTINCT sku)                         AS sku_count,
-                           STRING_AGG(DISTINCT sku, ', ' ORDER BY sku) AS all_skus
-                    FROM (
-                        SELECT DISTINCT sku, asin FROM inventory
-                        WHERE sku IS NOT NULL AND sku != '' AND asin IS NOT NULL AND asin != ''
-                          AND NOT regexp_matches(sku, '^[A-Z]{2}-[A-Z0-9]{4}-[A-Z0-9]{4}$')
-                    )
-                    GROUP BY asin
-                ),
-
                 -- ── FBA by ASIN ───────────────────────────────────────────────────
                 -- MAX(snapshot_date) 依當前 marketplace 限縮（各站同步日期不同）
                 -- Amazon 對同一 ASIN 底下的每個 SKU（舊版、" ME"、Stickered…）回報的是
@@ -204,7 +190,7 @@ class ReplenishmentService:
                           )
                       AND marketplace_id = ?
                       AND asin IS NOT NULL AND asin != ''
-                      AND NOT regexp_matches(sku, '^[A-Z]{2}-[A-Z0-9]{4}-[A-Z0-9]{4}$')
+                      AND NOT regexp_matches(sku, '^[A-Z0-9]{2}-[A-Z0-9]{4}-[A-Z0-9]{4}$')
                     GROUP BY asin
                 ),
 
@@ -305,8 +291,6 @@ class ReplenishmentService:
                     COALESCE(uc.unit_per_case, ac.unit_per_case, 1) AS unit_per_case,
                     a.synced_at                                   AS awd_synced_at,
                     us.synced_at                                  AS sz_synced_at,
-                    COALESCE(sap.sku_count, 1)                    AS sku_count,
-                    COALESCE(sap.all_skus, pc.sku)                AS all_skus,
                     -- 產品成本（Anchor COG，一律美元）—— 滯銷金額用
                     COALESCE(pc.cog, 0)                           AS cog
                 FROM anchor pc
@@ -317,7 +301,6 @@ class ReplenishmentService:
                 LEFT JOIN jl_by_asin     jl  ON pc.asin = jl.asin
                 LEFT JOIN uc_by_asin     uc  ON pc.asin = uc.asin
                 LEFT JOIN asin_config    ac  ON pc.asin = ac.asin
-                LEFT JOIN skus_per_asin  sap ON pc.asin = sap.asin
                 ORDER BY pc.collection NULLS LAST, pc.sku
             """, [marketplace_id, marketplace_id, marketplace_id,
                   marketplace_id, marketplace_id]).fetchall()
@@ -330,7 +313,6 @@ class ReplenishmentService:
                 "us_qty", "pending_qty", "order_date", "factory_confirmed_date",
                 "jl_qty", "unit_per_case",
                 "awd_synced_at", "sz_synced_at",
-                "sku_count", "all_skus",
                 "cog",
             ]
             return [dict(zip(cols, r)) for r in rows]
@@ -673,9 +655,6 @@ class ReplenishmentService:
             # 資料時間
             "awd_synced_at": str(r["awd_synced_at"]) if r["awd_synced_at"] else None,
             "sz_synced_at":  str(r["sz_synced_at"])  if r["sz_synced_at"]  else None,
-            # 多 SKU 提示：sku_count > 1 表示這 ASIN 底下有多個 seller SKU（例：新舊 SKU、-stickerless、Amazon.Found 等）
-            "sku_count":     int(r.get("sku_count") or 1),
-            "all_skus":      r.get("all_skus") or r["sku"],
         }
 
     # ── SKU Config CRUD ───────────────────────────────────────────────────────
@@ -736,7 +715,7 @@ class ReplenishmentService:
                         JOIN latest_per_mp lmp
                           ON i.marketplace_id = lmp.marketplace_id AND i.snapshot_date = lmp.max_date
                         WHERE i.asin IS NOT NULL AND i.asin != ''
-                          AND NOT regexp_matches(i.sku, '^[A-Z]{2}-[A-Z0-9]{4}-[A-Z0-9]{4}$')
+                          AND NOT regexp_matches(i.sku, '^[A-Z0-9]{2}-[A-Z0-9]{4}-[A-Z0-9]{4}$')
                         GROUP BY i.marketplace_id, i.asin
                     )
                     SELECT ANY_VALUE(sku), asin, ANY_VALUE(product_name),

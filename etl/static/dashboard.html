@@ -1193,15 +1193,8 @@ const usVirtualMonthCell = r => {
 };
 
 // SKU 欄：若同 ASIN 對應多個 SKU，顯示 SKU 加徽章「N SKUs」，滑鼠移過看所有 SKU
-const skuCell = r => {
-  const skuHtml = `<span style="font-weight:700">${r.sku||''}</span>`;
-  if(r.sku_count && r.sku_count > 1){
-    const alts = (r.all_skus||'').split(',').map(s=>s.trim()).filter(s=>s!==r.sku);
-    const tip  = `同 ASIN 有 ${r.sku_count} 個 SKU：\n${(r.all_skus||'').replace(/, /g, '\n')}`;
-    return `${skuHtml}<span class="badge b-multi" title="${tip}" style="margin-left:4px">⚠️ ${r.sku_count} SKUs</span>${alts.length?`<div style="font-size:9px;color:var(--text3);margin-top:2px;line-height:1.2">alt: ${alts.join(', ')}</div>`:''}`;
-  }
-  return skuHtml;
-};
+// SKU 只是 Anchor 內部編碼，純顯示（對應一律用 Child ASIN）
+const skuCell = r => `<span style="font-weight:700">${r.sku||''}</span>`;
 
 const renderers = {excessQtyCell,excessValueCell,typeTag,fbaMonthCell,awdMonthCell,covCell,replenCell,seaCell,airTag,capTag,skuCell,usMonthCell,szTotalMonthCell,transferCell,safetyCell,reorderQtyCell,reorderAlertTag,leadTimeCell,pendingCell,usVirtualMonthCell,caseReorderCell,orderDateCell,immedCovCell,totalPipeCell,orderDateOnlyCell,expectedDateCell,factoryConfirmedCell};
 
@@ -1618,8 +1611,6 @@ const CSV_EXTRA_FIELDS = [
   ['days_can_last',         '現有可撐天數'],
   ['lead_time_days',        '生產交期 (天)'],
   ['case_reorder_count',    '返單箱數'],
-  ['sku_count',             'SKU 數 (同 ASIN)'],
-  ['all_skus',              '全部 alias SKUs'],
 ];
 const MP_CODE = {ATVPDKIKX0DER:'US', A1F83G8C2ARO7P:'UK', A1PA6795UKMFR9:'DE'};
 
