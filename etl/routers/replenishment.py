@@ -50,8 +50,8 @@ _CSV_FIELDS = [
     ("total_coverage",        "Total Coverage FBA+AWD (M)"),
     ("cap_alert",             "Cap 警示（FBA+AWD 總上限）"),
     # 滯銷庫存
-    ("excess_qty",            "滯銷數量"),
-    ("excess_value",          "滯銷金額 (USD)"),
+    ("excess_qty",            "AMZN滯銷數量"),
+    ("excess_value",          "AMZN滯銷金額 (USD)"),
     # 深圳倉庫（美國倉 + 欠數 + 佳樂倉）
     ("safety_stock",          "安全庫存門檻"),
     ("us_qty",                "美國倉"),

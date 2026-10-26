@@ -352,14 +352,14 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <div class="sub" id="k-cap-sub">FBA+AWD 超過上限</div>
     </div>
     <div class="card c-orange">
-      <div class="lbl">📦 滯銷庫存數</div>
+      <div class="lbl">📦 AMZN滯銷數量</div>
       <div class="val" id="k-excess-qty" style="color:#6D4C41">—</div>
       <div class="sub" id="k-excess-qty-sub">超過一年銷量的件數</div>
     </div>
     <div class="card c-orange">
-      <div class="lbl">💰 滯銷金額</div>
+      <div class="lbl">💰 AMZN滯銷金額</div>
       <div class="val" id="k-excess" style="color:#6D4C41">—</div>
-      <div class="sub" id="k-excess-sub">USD（滯銷數量 × COG）</div>
+      <div class="sub" id="k-excess-sub">USD（AMZN滯銷數量 × COG）</div>
     </div>
     <div class="card c-green">
       <div class="lbl">🚢 需補海運</div>
@@ -510,7 +510,7 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <option value="reorder">需返單</option>
       <option value="air">空運警示</option>
       <option value="cap">超過上限</option>
-      <option value="excess">有滯銷庫存</option>
+      <option value="excess">有AMZN滯銷庫存</option>
       <option value="sea">需補海運</option>
     </select>
     <label>Collection</label>
@@ -531,7 +531,7 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
           <th colspan="4" class="g-fba">FBA</th>
           <th colspan="5" class="g-awd">AWD</th>
           <th colspan="2" class="g-cov">Coverage</th>
-          <th colspan="2" class="g-excess">滯銷庫存</th>
+          <th colspan="2" class="g-excess">AMZN滯銷庫存</th>
           <th colspan="12" class="g-sz">深圳倉庫（佳樂倉 + 美國倉 + 欠數）</th>
           <th colspan="5" class="g-reo">返單計畫</th>
           <th colspan="4" class="g-rep">AWD Replenishment</th>
@@ -870,10 +870,10 @@ const COLS = [
   {k:'cap_alert',        h:'Cap 警示',                 w:78,  a:'center', r:'capTag',
       tip:'FBA+AWD Total Coverage 超過上限月數（Controls → FBA+AWD 總上限月數）'},
   // ── 滯銷庫存 ──────────────────────────────────────────────────────────
-  {k:'excess_qty',       h:'滯銷數量',                 w:70,  a:'center', r:'excessQtyCell',
+  {k:'excess_qty',       h:'AMZN滯銷數量',             w:96,  a:'center', r:'excessQtyCell',
       tip:'max(0, FBA Available + AWD Available − Sales Qty(M) × 12)\n不含在途（Inbound）'},
-  {k:'excess_value',     h:'滯銷金額\n(USD)',          w:84,  a:'center', r:'excessValueCell',
-      tip:'滯銷數量 × Anchor COG（美元）'},
+  {k:'excess_value',     h:'AMZN滯銷金額\n(USD)',      w:96,  a:'center', r:'excessValueCell',
+      tip:'AMZN滯銷數量 × Anchor COG（美元）'},
   // ── 深圳倉庫（新版：美國倉 + 欠數 + 佳樂倉）─────────────────────────
   {k:'safety_stock',     h:'安全庫存\n門檻',            w:65,  a:'center', r:'safetyCell'},
   {k:'jl_qty',           h:'佳樂倉',                   w:65,  a:'center', fmt:0},
@@ -1260,7 +1260,7 @@ async function loadData() {
       document.getElementById('k-excess-qty-sub').textContent = `${excessCnt} 個 ASIN 超過一年銷量`;
       document.getElementById('k-excess').textContent =
         '$' + Math.round(excessUsd).toLocaleString();
-      document.getElementById('k-excess-sub').textContent = 'USD（滯銷數量 × COG）';
+      document.getElementById('k-excess-sub').textContent = 'USD（AMZN滯銷數量 × COG）';
     }
     document.getElementById('k-cap').textContent   = allData.filter(r=>r.cap_alert==='🔴 超過上限').length;
     document.getElementById('k-sea').textContent   = allData.filter(r=>r.sea_shipment_qty>0).length;
