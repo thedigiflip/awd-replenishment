@@ -4,6 +4,10 @@ Multi-marketplace Amazon FBA inventory, sales, and advertising management system
 
 ---
 
+> **Architecture principles** (single warehouse, Bronze/Silver/Gold layers, Child ASIN as
+> product key, how to add a new data source): see [`ARCHITECTURE.md`](ARCHITECTURE.md).
+> Read it before adding features or data sources.
+
 ## 3-Minute Brief (for Claude and new engineers)
 
 **What this system does:** Automatically pulls data from Amazon SP-API daily (inventory, sales, orders, fees, ads), writes to local DuckDB, and serves it via FastAPI to a single-page HTML dashboard. Combines the Anchor product master, Shenzhen warehouse (factory-side stock), and Amazon FBA/AWD inventory to compute per-SKU replenishment recommendations (transfer quantity, reorder quantity, AWD replenishment).
