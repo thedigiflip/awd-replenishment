@@ -26,6 +26,7 @@ ROW_FIELDS = [
     "fba_us", "fba_uk", "fba_de", "fba_available", "awd_available", "us_qty",
     "stock_total", "excess_qty", "excess_value",
     "excess_in_us_wh", "excess_in_awd", "excess_in_fba",
+    "excess_in_fba_us", "excess_in_fba_uk", "excess_in_fba_de",
     "months_of_supply", "supply_tier", "sales_trend_pct",
     "pending_qty", "fba_inbound", "awd_inbound", "replenishing_qty",
     "still_replenishing", "cog_missing", "jl_qty",
@@ -35,7 +36,8 @@ SNAPSHOT_FIELDS = [
     "asin", "collection", "cog", "fba_us", "fba_uk", "fba_de", "awd_available", "us_qty",
     "sales_us_30d", "sales_ca_30d", "sales_mx_30d", "sales_uk_30d", "sales_de_30d",
     "all_channel_30d", "annual_months", "stock_total", "excess_qty", "excess_value",
-    "excess_in_us_wh", "excess_in_awd", "excess_in_fba", "pending_qty",
+    "excess_in_us_wh", "excess_in_awd", "excess_in_fba",
+    "excess_in_fba_us", "excess_in_fba_uk", "excess_in_fba_de", "pending_qty",
 ]
 
 _PARAM_KEYS = {k for k, _, _ in DEFAULT_PARAMS}
@@ -80,9 +82,15 @@ class ExcessInventoryService:
                     SUM(excess_in_us_wh * cog)                                AS value_us_wh,
                     SUM(excess_in_awd   * cog)                                AS value_awd,
                     SUM(excess_in_fba   * cog)                                AS value_fba,
+                    SUM(excess_in_fba_us * cog)                               AS value_fba_us,
+                    SUM(excess_in_fba_uk * cog)                               AS value_fba_uk,
+                    SUM(excess_in_fba_de * cog)                               AS value_fba_de,
                     SUM(excess_in_us_wh)                                      AS qty_us_wh,
                     SUM(excess_in_awd)                                        AS qty_awd,
                     SUM(excess_in_fba)                                        AS qty_fba,
+                    SUM(excess_in_fba_us)                                     AS qty_fba_us,
+                    SUM(excess_in_fba_uk)                                     AS qty_fba_uk,
+                    SUM(excess_in_fba_de)                                     AS qty_fba_de,
                     SUM(stock_total)                                          AS stock_total,
                     SUM(stock_total * cog)                                    AS stock_value,
                     MAX(annual_months)                                        AS annual_months
@@ -90,7 +98,9 @@ class ExcessInventoryService:
             """).fetchone()
             skeys = ["excess_qty", "excess_value", "excess_asins", "still_replenishing",
                      "potential_asins", "value_us_wh", "value_awd", "value_fba",
-                     "qty_us_wh", "qty_awd", "qty_fba", "stock_total", "stock_value",
+                     "value_fba_us", "value_fba_uk", "value_fba_de",
+                     "qty_us_wh", "qty_awd", "qty_fba", "qty_fba_us", "qty_fba_uk", "qty_fba_de",
+                     "stock_total", "stock_value",
                      "annual_months"]
             summary = {k: _num(v) or 0 for k, v in zip(skeys, s)}
 

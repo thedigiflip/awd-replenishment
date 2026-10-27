@@ -217,7 +217,7 @@ tfoot td{position:sticky;bottom:0;background:#ECEFF1;font-weight:700;padding:7px
     <div class="panel">
       <div class="panel-hdr">
         <span class="t">滯銷在哪裡</span>
-        <span class="h" title="一年內預計賣掉的貨，會先從最靠近客戶的位置消化（FBA → AWD → 美國倉），所以滯銷依序歸在 美國倉 → AWD → FBA">分配規則：先算美國倉，再 AWD，最後 FBA ⓘ</span>
+        <span class="h" title="① 各站需求先用自己的庫存：UK 需求→FBA UK；DE 需求→FBA DE；US+CA+MX 需求→FBA US→AWD→美國倉&#10;② 不夠的需求再用剩下的庫存：美國倉→AWD→FBA US→FBA UK→FBA DE&#10;③ 最後剩下的就是各位置的滯銷（加總 = 全通路滯銷）&#10;所以 UK / DE 當地賣不動的貨，會顯示在 FBA UK / DE">分配規則：各站先用自己的庫存 ⓘ｜點長條可篩選明細</span>
       </div>
       <div class="chart-box sm"><canvas id="c-loc"></canvas></div>
     </div>
@@ -331,8 +331,9 @@ const COLS = [
   {k:'cog',           h:'COG\n(USD)', num:true, r: r => r.cog ? r.cog.toFixed(2) : '<span class="badge b-gray" title="Anchor COG = 0（已下架），滯銷金額會是 0">0 / 下架</span>'},
   {k:'excess_qty',    h:'全通路\n滯銷數量', num:true, tot:true, g:'ex', r: r => r.excess_qty ? `<span class="ex-q">${fInt(r.excess_qty)}</span>` : '<span class="muted">—</span>'},
   {k:'excess_value',  h:'全通路\n滯銷金額 (USD)', num:true, tot:true, money:true, g:'ex', r: r => r.excess_value ? `<span class="ex-v">${fUsd(r.excess_value)}</span>` : '<span class="muted">—</span>'},
-  {k:'excess_loc',    h:'滯銷位置', g:'ex', f:'select', fv: r => locLabel(r), sortv: r => r.excess_in_us_wh,
-     tip:'滯銷分配：先算美國倉 → AWD → FBA', r: r => locCell(r)},
+  {k:'excess_loc',    h:'滯銷位置', g:'ex', f:'select', sortv: r => r.excess_qty,
+     opts: () => LOCS.map(l => l.label), match: (r, v) => { const l = LOCS.find(x => x.label === v); return l && r[l.f] > 0; },
+     tip:'各站需求先用自己的庫存，剩下的才是該位置的滯銷（滑鼠移到圖表說明看完整規則）', r: r => locCell(r)},
 ];
 
 function typeBadge(t){
@@ -354,21 +355,10 @@ function trendCell(r){
   if (p <= -20) return `<span class="dn" title="${tip}">${s} ↓</span>`;
   return `<span title="${tip}">${s}</span>`;
 }
-function locLabel(r){
-  if (!r.excess_qty) return '—';
-  const parts = [];
-  if (r.excess_in_us_wh) parts.push('美國倉');
-  if (r.excess_in_awd) parts.push('AWD');
-  if (r.excess_in_fba) parts.push('FBA');
-  return parts.join('+');
-}
 function locCell(r){
   if (!r.excess_qty) return '<span class="muted">—</span>';
-  const p = [];
-  if (r.excess_in_us_wh) p.push(`美國倉 <b>${fInt(r.excess_in_us_wh)}</b>`);
-  if (r.excess_in_awd)   p.push(`AWD <b>${fInt(r.excess_in_awd)}</b>`);
-  if (r.excess_in_fba)   p.push(`FBA <b>${fInt(r.excess_in_fba)}</b>`);
-  return `<span class="loc">${p.join(' · ')}</span>`;
+  return '<span class="loc">' + LOCS.filter(l => r[l.f] > 0)
+    .map(l => `${l.label} <b>${fInt(r[l.f])}</b>`).join(' · ') + '</span>';
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -542,22 +532,40 @@ function renderPie(){
   });
 }
 
+// 滯銷位置：key = 欄位、label = 顯示名稱、hint = 建議處理方向
+const LOCS = [
+  {k:'us_wh',  f:'excess_in_us_wh',  label:'美國倉', color:'#33691E', hint:'轉給其他通路（Shopify / TikTok / 批發）消化'},
+  {k:'awd',    f:'excess_in_awd',    label:'AWD',    color:'#BF360C', hint:'暫停 AWD → FBA 補貨；評估轉回美國倉給其他通路'},
+  {k:'fba_us', f:'excess_in_fba_us', label:'FBA US', color:'#0D47A1', hint:'US 站促銷 / 廣告；長期滯銷評估移除'},
+  {k:'fba_uk', f:'excess_in_fba_uk', label:'FBA UK', color:'#6A1B9A', hint:'UK 站促銷 / 廣告；貨只能賣 UK，評估移除或清倉'},
+  {k:'fba_de', f:'excess_in_fba_de', label:'FBA DE', color:'#F9A825', hint:'DE 站促銷 / 廣告；貨只能賣當地，評估移除或清倉'},
+];
+
 function renderLoc(){
   const s = RAW.summary;
-  const labels = ['美國倉', 'AWD', 'FBA (US+UK+DE)'];
-  const vals = [s.value_us_wh, s.value_awd, s.value_fba];
-  const qtys = [s.qty_us_wh, s.qty_awd, s.qty_fba];
-  const tot = vals.reduce((a, b) => a + b, 0);
+  const items = LOCS.map(l => ({...l, v: s['value_' + l.k] || 0, q: s['qty_' + l.k] || 0}))
+                    .sort((a, b) => b.v - a.v);                    // 金額由大到小
+  const tot = items.reduce((a, b) => a + b.v, 0);
+  const pct = v => tot ? (v / tot * 100).toFixed(0) : 0;
   mkChart('c-loc', {
     type: 'bar',
-    data: {labels, datasets: [{data: vals, backgroundColor: ['#33691E', '#BF360C', '#0D47A1'], borderRadius: 4}]},
+    data: {labels: items.map(x => x.label),
+           datasets: [{data: items.map(x => x.v), backgroundColor: items.map(x => x.color), borderRadius: 4}]},
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
       plugins: {legend: {display: false}, tooltip: {callbacks: {
-        label: c => `${fUsd(c.parsed.x)}（${tot ? (c.parsed.x / tot * 100).toFixed(0) : 0}%）｜${fInt(qtys[c.dataIndex])} 件`}}},
+        label: c => `${fUsd(c.parsed.x)}（${pct(c.parsed.x)}%）｜${fInt(items[c.dataIndex].q)} 件`,
+        afterLabel: c => '建議：' + items[c.dataIndex].hint,
+      }}},
       scales: {x: {beginAtZero: true, ticks: {callback: v => fUsdK(v), font: {size: 10}}},
                y: {ticks: {font: {size: 11, weight: '600'},
-                   callback: function(v, i){ return `${labels[i]}  ${fUsdK(vals[i])} · ${tot ? (vals[i]/tot*100).toFixed(0) : 0}%`; }}}},
+                   callback: (v, i) => `${items[i].label}  ${fUsdK(items[i].v)} · ${pct(items[i].v)}%`}}},
+      onClick: (e, els) => {
+        if (!els.length) return;
+        colFilters.excess_loc = items[els[0].index].label;
+        chips.excess = true; chips.pot = false; syncChips();
+        buildHeader(); renderTable(); scrollToTable();
+      },
     },
   });
 }
@@ -611,7 +619,7 @@ function buildHeader(){
     const cur = colFilters[c.k] ?? '';
     if (c.f === 'text') return `<th><input type="text" data-k="${c.k}" value="${esc(cur)}" placeholder="搜尋"></th>`;
     if (c.f === 'select') {
-      const opts = [...new Set(RAW.data.map(r => String(filterValue(c, r))))].sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+      const opts = c.opts ? c.opts() : [...new Set(RAW.data.map(r => String(filterValue(c, r))))].sort((a, b) => a.localeCompare(b, 'zh-Hant'));
       const o = ['<option value="">全部</option>'].concat(opts.map(v =>
         `<option value="${esc(v)}" ${v === String(cur) && cur !== '' ? 'selected' : ''}>${esc(v || '(空白)')}</option>`));
       return `<th><select data-k="${c.k}">${o.join('')}</select></th>`;
@@ -640,7 +648,7 @@ function filteredRows(){
       const q = String(v).trim().toLowerCase();
       if (q) rows = rows.filter(r => String(r[k] ?? '').toLowerCase().includes(q));
     } else {
-      rows = rows.filter(r => String(filterValue(c, r)) === String(v));
+      rows = c.match ? rows.filter(r => c.match(r, v)) : rows.filter(r => String(filterValue(c, r)) === String(v));
     }
   }
   const c = COLS.find(x => x.k === sortKey) || {};
@@ -706,7 +714,8 @@ const CSV_COLS = [
   ['fba_available', 'FBA Available'], ['awd_available', 'AWD Available'], ['us_qty', '美國倉'],
   ['stock_total', '庫存池合計'], ['months_of_supply', '可銷月數'], ['supply_tier', '等級'], ['cog', 'COG (USD)'],
   ['excess_qty', '全通路滯銷數量'], ['excess_value', '全通路滯銷金額 (USD)'],
-  ['excess_in_us_wh', '滯銷位置-美國倉'], ['excess_in_awd', '滯銷位置-AWD'], ['excess_in_fba', '滯銷位置-FBA'],
+  ['excess_in_us_wh', '滯銷位置-美國倉'], ['excess_in_awd', '滯銷位置-AWD'],
+  ['excess_in_fba_us', '滯銷位置-FBA US'], ['excess_in_fba_uk', '滯銷位置-FBA UK'], ['excess_in_fba_de', '滯銷位置-FBA DE'],
   ['still_replenishing', '仍在補貨'], ['pending_qty', '欠數'], ['fba_inbound', 'FBA 在途'], ['awd_inbound', 'AWD 在途'],
   // 拆分明細
   ['sales_us_30d', '銷量 US (30天)'], ['sales_ca_30d', '銷量 CA (30天)'], ['sales_mx_30d', '銷量 MX (30天)'],

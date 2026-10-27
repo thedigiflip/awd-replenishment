@@ -82,11 +82,18 @@ def _create_tables(conn: duckdb.DuckDBPyConnection) -> None:
             excess_in_us_wh   INTEGER DEFAULT 0,
             excess_in_awd     INTEGER DEFAULT 0,
             excess_in_fba     INTEGER DEFAULT 0,
+            excess_in_fba_us  INTEGER DEFAULT 0,
+            excess_in_fba_uk  INTEGER DEFAULT 0,
+            excess_in_fba_de  INTEGER DEFAULT 0,
             pending_qty       INTEGER DEFAULT 0,
             synced_at         TIMESTAMPTZ DEFAULT now(),
             PRIMARY KEY (snapshot_date, asin)
         );
     """)
+    # 既有部署補欄位（2026-10-27：FBA 滯銷拆 US / UK / DE）
+    for col in ("excess_in_fba_us", "excess_in_fba_uk", "excess_in_fba_de"):
+        conn.execute(f"ALTER TABLE fact_excess_inventory_daily "
+                     f"ADD COLUMN IF NOT EXISTS {col} INTEGER DEFAULT 0")
     for key, value, label in DEFAULT_PARAMS:
         conn.execute(
             "INSERT OR IGNORE INTO dim_params (key, value, label) VALUES (?, ?, ?)",
@@ -236,7 +243,14 @@ def _create_views(conn: duckdb.DuckDBPyConnection) -> None:
     #   - 美國倉來自 vw_silver_sz_by_asin，每個 ASIN 只有一列 → 只加一次
     # 全通路 30 天銷量 = Amazon US + CA + MX + UK + DE（之後加 Shopify / TikTok Shop）
     # 滯銷數量 = max(0, 庫存池 − 全通路 30 天銷量 × N)，逐 ASIN 計算後才加總
-    # 滯銷位置（由上游往下游分配：美國倉 → AWD → FBA；越靠近客戶的貨越先賣掉）
+    # 滯銷位置（2026-10-27 改為「依站點對應需求」分配，總數不變）：
+    #   1. 各站需求先用該站自己的庫存：UK 需求 → FBA UK；DE 需求 → FBA DE；
+    #      US+CA+MX 需求 → FBA US → AWD → 美國倉（越靠近客戶越先賣）
+    #   2. 還沒被滿足的需求（例如 UK 自己的 FBA 不夠），再用剩下的庫存補：
+    #      美國倉 → AWD → FBA US → FBA UK → FBA DE（越容易調度的先用）
+    #   3. 最後剩下的就是各位置的滯銷；加總 = 滯銷數量
+    #   目的：FBA UK / DE 的貨只能賣給當地，當地賣不動就會顯示在當地，
+    #   不會被 US 的銷量「抵掉」而誤判成 AWD / 美國倉滯銷。
     conn.execute(f"""
         CREATE OR REPLACE VIEW vw_gold_excess_inventory AS
         WITH
@@ -322,17 +336,49 @@ def _create_views(conn: duckdb.DuckDBPyConnection) -> None:
         ),
         calc4 AS (
             SELECT *,
-                   ROUND(excess_qty * cog, 2)                               AS excess_value,
-                   LEAST(excess_qty, us_qty)                                AS excess_in_us_wh
+                   ROUND(excess_qty * cog, 2)                                AS excess_value,
+                   -- 各區年需求
+                   ROUND((sales_us_30d + sales_ca_30d + sales_mx_30d) * annual_months)::INTEGER AS d_us,
+                   ROUND(sales_uk_30d * annual_months)::INTEGER              AS d_uk,
+                   ROUND(sales_de_30d * annual_months)::INTEGER              AS d_de
             FROM calc3
         ),
-        calc5 AS (
+        -- 步驟 1：各站需求用自己的庫存
+        a1 AS (SELECT *, LEAST(fba_uk, d_uk) AS u_uk, LEAST(fba_de, d_de) AS u_de,
+                         LEAST(fba_us, d_us) AS u_fus FROM calc4),
+        a2 AS (SELECT *, LEAST(awd_available, d_us - u_fus) AS u_awd FROM a1),
+        a3 AS (SELECT *, LEAST(us_qty, d_us - u_fus - u_awd) AS u_wh FROM a2),
+        a4 AS (
             SELECT *,
-                   LEAST(excess_qty - excess_in_us_wh, awd_available)       AS excess_in_awd
-            FROM calc4
+                   us_qty - u_wh            AS l_wh,
+                   awd_available - u_awd    AS l_awd,
+                   fba_us - u_fus           AS l_fus,
+                   fba_uk - u_uk            AS l_uk,
+                   fba_de - u_de            AS l_de,
+                   -- 步驟 2 要再消化的量 = 總消化量 − 步驟 1 已消化（確保加總 = 滯銷數量）
+                   GREATEST(0, (stock_total - excess_qty)
+                               - (u_uk + u_de + u_fus + u_awd + u_wh)) AS r0
+            FROM a3
+        ),
+        -- 步驟 2：剩餘需求依 美國倉 → AWD → FBA US → FBA UK → FBA DE 消化
+        a5 AS (SELECT *, LEAST(l_wh,  r0)                         AS c_wh  FROM a4),
+        a6 AS (SELECT *, LEAST(l_awd, r0 - c_wh)                  AS c_awd FROM a5),
+        a7 AS (SELECT *, LEAST(l_fus, r0 - c_wh - c_awd)          AS c_fus FROM a6),
+        a8 AS (SELECT *, LEAST(l_uk,  r0 - c_wh - c_awd - c_fus)  AS c_uk  FROM a7),
+        a9 AS (SELECT *, LEAST(l_de,  r0 - c_wh - c_awd - c_fus - c_uk) AS c_de FROM a8),
+        calc5 AS (
+            SELECT * EXCLUDE (d_us, d_uk, d_de, u_uk, u_de, u_fus, u_awd, u_wh,
+                              l_wh, l_awd, l_fus, l_uk, l_de, r0,
+                              c_wh, c_awd, c_fus, c_uk, c_de),
+                   (l_wh  - c_wh)   AS excess_in_us_wh,
+                   (l_awd - c_awd)  AS excess_in_awd,
+                   (l_fus - c_fus)  AS excess_in_fba_us,
+                   (l_uk  - c_uk)   AS excess_in_fba_uk,
+                   (l_de  - c_de)   AS excess_in_fba_de
+            FROM a9
         )
         SELECT *,
-               (excess_qty - excess_in_us_wh - excess_in_awd)               AS excess_in_fba,
+               (excess_in_fba_us + excess_in_fba_uk + excess_in_fba_de)     AS excess_in_fba,
                CASE WHEN all_channel_30d > 0
                     THEN ROUND(stock_total / all_channel_30d, 1) END        AS months_of_supply,
                CASE
