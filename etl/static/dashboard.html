@@ -172,6 +172,9 @@ tbody td.left{text-align:left;max-width:220px;overflow:hidden;text-overflow:elli
 tbody td.name-cell{text-align:left;min-width:180px;max-width:320px;white-space:normal;word-break:break-word;line-height:1.4;}
 tbody td.sku{font-weight:700;font-size:11px;text-align:left;}
 tbody td.num{font-variant-numeric:tabular-nums;}
+/* 合計列（篩選後）— 固定在表格底部 */
+#tfoot td{position:sticky;bottom:0;z-index:5;background:#ECEFF1;font-weight:700;padding:7px 10px;
+  border-top:2px solid #B0BEC5;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums;}
 
 /* badges */
 .badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;}
@@ -533,6 +536,7 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <tbody id="tbody">
         <tr><td colspan="42" class="empty"><div class="spinner"></div> 載入中...</td></tr>
       </tbody>
+      <tfoot id="tfoot"></tfoot>
     </table>
   </div>
 </div>
@@ -1331,6 +1335,7 @@ function render() {
   if(!rows.length){
     document.getElementById('tbody').innerHTML =
       '<tr><td colspan="42" class="empty">無符合條件的資料</td></tr>';
+    document.getElementById('tfoot').innerHTML = '';
     return;
   }
 
@@ -1348,6 +1353,31 @@ function render() {
     }).join('');
     return `<tr>${cells}</tr>`;
   }).join('');
+
+  renderTotals(rows);
+}
+
+// ── 合計列（依目前篩選後的列加總；只加數量類欄位，月數 / 日期 / 警示不加）──────────
+// 只加正值：與格子顯示一致（0 或負值在表格上顯示為「—」）
+const TOTAL_COLS = {
+  sales_qty:'int', fba_available:'int', fba_inbound:'int', fba_total:'int',
+  awd_available:'int', awd_inbound:'int', awd_outbound:'int', awd_total:'int',
+  excess_qty:'int', excess_value:'usd',
+  jl_qty:'int', us_qty:'int', pending_qty:'int',
+  transfer_qty:'int', reorder_qty:'int', case_reorder_qty:'int', awd_replen_qty:'int',
+};
+function renderTotals(rows){
+  const cells = COLS.map((col, i) => {
+    if(i === 0) return '<td style="text-align:left">合計</td>';
+    const t = TOTAL_COLS[col.k];
+    if(!t) return '<td></td>';
+    const sum = rows.reduce((s, r) => s + Math.max(0, Number(r[col.k]) || 0), 0);
+    const txt = t === 'usd'
+      ? '$' + Math.round(sum).toLocaleString('en-US')
+      : Math.round(sum).toLocaleString('en-US');
+    return `<td>${txt}</td>`;
+  }).join('');
+  document.getElementById('tfoot').innerHTML = `<tr>${cells}</tr>`;
 }
 
 // ── File uploads ──────────────────────────────────────────────────────────────
