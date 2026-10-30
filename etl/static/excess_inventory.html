@@ -705,28 +705,20 @@ function clearFilters(){
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// CSV（篩選後的明細；欄位順序同畫面，最後附上拆分欄位）
+// CSV（篩選後的明細）— 欄位由伺服器統一定義（etl/core/report_columns.py →
+// GET /reports/columns），與每月 Excel 報表完全一致
 // ════════════════════════════════════════════════════════════════════════════
-const CSV_COLS = [
-  ['parent_asin', 'Parent ASIN'], ['asin', 'Child ASIN'], ['sku', 'SKU'], ['collection', 'Collection'],
-  ['product_name', 'Name'], ['product_type', '產品類型'],
-  ['amazon_30d', 'Amazon 銷量 (30天)'], ['annual_sales', '全通路年銷量'], ['sales_trend_pct', '銷量趨勢 % (vs 前30天)'],
-  ['fba_available', 'FBA Available'], ['awd_available', 'AWD Available'], ['us_qty', '美國倉'],
-  ['stock_total', '庫存池合計'], ['months_of_supply', '可銷月數'], ['supply_tier', '等級'], ['cog', 'COG (USD)'],
-  ['excess_qty', '全通路滯銷數量'], ['excess_value', '全通路滯銷金額 (USD)'],
-  ['excess_in_us_wh', '滯銷位置-美國倉'], ['excess_in_awd', '滯銷位置-AWD'],
-  ['excess_in_fba_us', '滯銷位置-FBA US'], ['excess_in_fba_uk', '滯銷位置-FBA UK'], ['excess_in_fba_de', '滯銷位置-FBA DE'],
-  ['still_replenishing', '仍在補貨'], ['pending_qty', '欠數'], ['fba_inbound', 'FBA 在途'], ['awd_inbound', 'AWD 在途'],
-  // 拆分明細
-  ['sales_us_30d', '銷量 US (30天)'], ['sales_ca_30d', '銷量 CA (30天)'], ['sales_mx_30d', '銷量 MX (30天)'],
-  ['sales_uk_30d', '銷量 UK (30天)'], ['sales_de_30d', '銷量 DE (30天)'], ['all_channel_prev_30d', '全通路銷量 (前30天)'],
-  ['fba_us', 'FBA US'], ['fba_uk', 'FBA UK'], ['fba_de', 'FBA DE'],
-];
-function exportCsv(){
+async function exportCsv(){
   if (!RAW) return;
+  let cols;
+  try {
+    const res = await fetch('/reports/columns');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    cols = (await res.json()).excess;
+  } catch (e) { alert('無法取得匯出欄位定義：' + e.message); return; }
   const rows = filteredRows();
   const q = v => { const s = v == null ? '' : (v === true ? 'Y' : v === false ? '' : String(v)); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  const lines = [CSV_COLS.map(c => q(c[1])).join(',')].concat(rows.map(r => CSV_COLS.map(c => q(r[c[0]])).join(',')));
+  const lines = [cols.map(c => q(c[1])).join(',')].concat(rows.map(r => cols.map(c => q(r[c[0]])).join(',')));
   const blob = new Blob(['﻿' + lines.join('\n')], {type: 'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);

@@ -90,6 +90,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 | FBA Fees 月報 | 每月 2 號 12:00 | `product_catalog.fba_fee` |
 | Traffic Backfill | 手動 | `sales_traffic` |
 | Excess Inventory — Daily Snapshot | 每天 23:00 | `fact_excess_inventory_daily`（跨境滯銷水位，見 `PROJECT_STATUS_EXCESS.md`） |
+| Monthly Excess Report — Email | 每月 1 號 09:00（報表）、28 號 09:00（提醒） | `/data/reports/`（Excel 存檔）；Gmail 寄出，見 `MONTHLY_REPORT.md` |
 
 兩個 Gmail 節點目前**停用**（主 ETL、AWD Report），等 HTTPS 設好後再啟用。
 

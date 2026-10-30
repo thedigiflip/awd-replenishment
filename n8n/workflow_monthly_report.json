@@ -1,0 +1,183 @@
+{
+  "id": "monthlyReport001",
+  "active": false,
+  "name": "Monthly Excess Report | Email",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 1 1 * *"
+            }
+          ]
+        }
+      },
+      "id": "trigger-monthly",
+      "name": "1st of Month 01:00 UTC (09:00 Taipei)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://etl:8000/reports/monthly",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "generate-report",
+      "name": "Generate Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 60000
+    },
+    {
+      "parameters": {
+        "url": "=http://etl:8000{{ $json.download_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "id": "download-report",
+      "name": "Download Excel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "amber.hsieh@mageasy.co",
+        "subject": "={{ $('Generate Report').item.json.email_subject }}",
+        "emailType": "html",
+        "message": "={{ $('Generate Report').item.json.email_html }}",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "data"
+              }
+            ]
+          }
+        }
+      },
+      "id": "send-report",
+      "name": "Send Report (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 1 28 * *"
+            }
+          ]
+        }
+      },
+      "id": "trigger-reminder",
+      "name": "28th 01:00 UTC (09:00 Taipei) Reminder",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "amber.hsieh@mageasy.co",
+        "subject": "[MAGEASY] 提醒：月底前請更新深圳倉 template（滯銷月報 1 號寄出）",
+        "emailType": "html",
+        "message": "<div style=\"font-family:Arial,sans-serif;font-size:13px\">每月 1 號 09:00 會自動寄出滯銷庫存月報。<br>美國倉是滯銷金額最大的一塊，請在月底前到 dashboard 上傳最新的 <b>深圳倉 template</b>（美國倉 / 佳樂倉 / 欠數），並確認 AWD 資料已更新，月報數字才會準確。</div>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "send-reminder",
+      "name": "Send Reminder (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        460,
+        520
+      ]
+    }
+  ],
+  "connections": {
+    "1st of Month 01:00 UTC (09:00 Taipei)": {
+      "main": [
+        [
+          {
+            "node": "Generate Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Report": {
+      "main": [
+        [
+          {
+            "node": "Download Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Excel": {
+      "main": [
+        [
+          {
+            "node": "Send Report (Gmail)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "28th 01:00 UTC (09:00 Taipei) Reminder": {
+      "main": [
+        [
+          {
+            "node": "Send Reminder (Gmail)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC"
+  }
+}
