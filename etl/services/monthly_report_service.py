@@ -359,8 +359,13 @@ class MonthlyReportService:
             m = s["mom"]
             sign = "+" if m["diff"] >= 0 else "−"
             mom = f"{sign}${abs(m['diff']):,.0f}" + (f"（{m['pct']:+.1f}%）" if m["pct"] is not None else "")
-        loc = "".join(f"<tr><td>{l['label']}</td><td style='text-align:right'>{_usd(l['value'])}</td>"
-                      f"<td style='text-align:right'>{l['qty']:,}</td></tr>" for l in s["locations"])
+        # 佔比 = 該位置滯銷金額 ÷ 全部位置滯銷金額（與 Excel 摘要頁、dashboard 圖表相同）
+        loc_tot = sum(l["value"] for l in s["locations"]) or 1
+        loc = "".join(f"<tr><td style='padding:4px 10px'>{l['label']}</td>"
+                      f"<td style='text-align:right;padding:4px 10px'>{_usd(l['value'])}</td>"
+                      f"<td style='text-align:right;padding:4px 10px'>{l['qty']:,}</td>"
+                      f"<td style='text-align:right;padding:4px 10px'>{l['value'] / loc_tot * 100:.0f}%</td></tr>"
+                      for l in s["locations"])
         td = "padding:4px 10px;border-bottom:1px solid #eee"
         return f"""<div style="font-family:Arial,sans-serif;font-size:13px;color:#2C2C2C">
 <h2 style="margin:0 0 6px">MAGEASY 滯銷庫存月報 — {period}</h2>
@@ -374,7 +379,7 @@ class MonthlyReportService:
 </table>
 <b>滯銷在哪裡</b>
 <table style="border-collapse:collapse;margin:6px 0 12px">
-<tr><th style="text-align:left;padding:4px 10px">位置</th><th style="padding:4px 10px">金額</th><th style="padding:4px 10px">數量</th></tr>
+<tr><th style="text-align:left;padding:4px 10px">位置</th><th style="padding:4px 10px">金額</th><th style="padding:4px 10px">數量</th><th style="padding:4px 10px">佔比（依金額）</th></tr>
 {loc}
 </table>
 <div>附件 Excel 共 5 個分頁：摘要、Replenishment US / UK / DE、Excess Inventory。<br>
