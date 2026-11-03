@@ -66,7 +66,7 @@
     },
     {
       "parameters": {
-        "sendTo": "amber.hsieh@mageasy.co",
+        "sendTo": "amber.hsieh@mageasy.co, alice.ha@mageasy.co, maggie.huang@mageasy.co, jessica@galastar.net",
         "subject": "={{ $('Generate Report').item.json.email_subject }}",
         "emailType": "html",
         "message": "={{ $('Generate Report').item.json.email_html }}",

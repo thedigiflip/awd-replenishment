@@ -72,6 +72,8 @@ n8n 打開 **Monthly Excess Report | Email**：
 3. 確認無誤後切成 **Active**
 
 ## 4. 日常
-- 加收件人：n8n → 兩個 Gmail 節點的 **To**，多個信箱用逗號分隔（限 @mageasy.co）
+- 月報收件人（2026-11-03 起）：amber.hsieh@mageasy.co、alice.ha@mageasy.co、maggie.huang@mageasy.co、jessica@galastar.net（外部網域，Amber 指定）
+- 28 號提醒信收件人：amber.hsieh@mageasy.co
+- 加收件人：n8n → Gmail 節點的 **To**，多個信箱用逗號分隔；改完後同步更新 `n8n/workflow_monthly_report.json`
 - 補寄某個月：n8n 手動執行，或 `curl -X POST "http://localhost:8000/reports/monthly?period=2026-10"` 後從 `/data/reports/2026-10/` 取檔
 - 檔案含 COG 成本：只寄公司內部信箱，不用公開分享連結
