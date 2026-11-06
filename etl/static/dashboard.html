@@ -346,9 +346,9 @@ input[type=month]:focus{border-color:var(--primary);background:#fff;}
       <div class="sub" id="k-reorder-sub">🔴 需返單</div>
     </div>
     <div class="card c-red">
-      <div class="lbl">⚠️ 空運警示</div>
+      <div class="lbl">🔴 立即空運</div>
       <div class="val" id="k-air" style="color:var(--red)">—</div>
-      <div class="sub">Coverage &lt; 2.33M</div>
+      <div class="sub">Total Coverage &lt; 1 個月</div>
     </div>
     <div class="card c-orange">
       <div class="lbl" id="k-cap-lbl">🔴 超過 Cap</div>
@@ -1248,7 +1248,8 @@ async function loadData() {
     const nJlLow   = allData.filter(r => (r.reorder_alert||'').includes('佳樂')).length;
     document.getElementById('k-reorder').textContent     = nReorder;
     document.getElementById('k-reorder-sub').textContent = `🔴 需返單 ｜ 🟡 佳樂告急 ${nJlLow}`;
-    document.getElementById('k-air').textContent   = allData.filter(r=>r.air_alert).length;
+    // 只計算 🔴 立即空運（Total Coverage < 1 個月）；🟠 評估空運不列入此卡
+    document.getElementById('k-air').textContent   = allData.filter(r=>r.air_alert === '🔴 立即空運').length;
     // 滯銷庫存：以 ASIN 去重後加總金額（保險起見，避免同 ASIN 多列重複計算）
     {
       const seen = new Set(); let excessUsd = 0, excessQty = 0, excessCnt = 0;
